@@ -35,7 +35,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
               
               <TouchableOpacity style={styles.smallButton}>
-                <ThemedText style={styles.smallButtonText}>➕ Přidat cvik</ThemedText>
+                <ThemedText style={styles.smallButtonText}>➕ Přidat cvik </ThemedText>
               </TouchableOpacity>
             </ThemedView>
 

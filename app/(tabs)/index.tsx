@@ -63,7 +63,7 @@ export default function HomeScreen() {
           <ThemedView style={styles.features}>
             <ThemedView style={styles.featureItem}>
               <ThemedText style={styles.featureIcon}>💯</ThemedText>
-              <ThemedText style={styles.featureText}>Sleduj pokroky</ThemedText>
+              <ThemedText style={styles.featureText}>Sleduj pokroky </ThemedText>
             </ThemedView>
             
             <ThemedView style={styles.featureItem}>

@@ -1,6 +1,6 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import Body, { Slug } from "react-native-body-highlighter"; // Import Slug type
@@ -25,6 +25,7 @@ const MUSCLE_OPTIONS = [
 ];
 
 export default function MuscleSelectScreen() {
+  const router = useRouter();
   const [selected, setSelected] = useState<null | typeof MUSCLE_OPTIONS[0]>(null);
   const [side, setSide] = useState<"front" | "back">("front");
 
@@ -54,12 +55,22 @@ export default function MuscleSelectScreen() {
           />
         </View>
 
-        <View style={styles.controlsRow}>
+        {/* Header buttons (absolute) - Back (left) and Flip (right) */}
+        <View style={styles.header} pointerEvents="box-none">
           <TouchableOpacity
-            onPress={() => setSide(side === "front" ? "back" : "front")}
-            style={styles.flipButton}
+            style={styles.headerButton}
+            onPress={() => router.back()}
+            accessibilityLabel="Zpět"
           >
-            <ThemedText style={styles.flipButtonText}>Otočit</ThemedText>
+            <ThemedText style={styles.headerButtonText}>← Zpět</ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => setSide(side === "front" ? "back" : "front")}
+            accessibilityLabel="Otočit tělo"
+          >
+            <ThemedText style={styles.headerButtonText}>Otočit</ThemedText>
           </TouchableOpacity>
         </View>
 
@@ -163,4 +174,24 @@ const styles = StyleSheet.create({
     borderColor: "#333",
   },
   flipButtonText: { color: "#fff", fontSize: 14, fontWeight: "600" },
+  header: {
+    position: "absolute",
+    top: 12,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    zIndex: 10,
+  },
+  headerButton: {
+    backgroundColor: "rgba(17,17,17,0.9)",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#333",
+  },
+  headerButtonText: { color: "#fff", fontSize: 14, fontWeight: "600" },
 });

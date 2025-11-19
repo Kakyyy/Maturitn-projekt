@@ -1,6 +1,8 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Link, useLocalSearchParams } from 'expo-router';
+import EXERCISES from '@/src/data/exercises';
+import { Exercise } from '@/src/data/types';
 import { ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 
 export default function MuscleScreen() {
@@ -8,41 +10,16 @@ export default function MuscleScreen() {
   
   const muscleNames: { [key: string]: string } = {
     chest: 'Prsní svaly',
-    back: 'Zádové svaly', 
+    back: 'Zádové svaly',
+    deltoids: 'Ramena',
+    trapezius: 'Trapézy',
+    gluteal: 'Hýždě',
     legs: 'Nohy',
     arms: 'Ruce',
     core: 'Břišní svaly'
   };
 
-  const exercises: { [key: string]: Array<{id: string, name: string, equipment: string}> } = {
-    chest: [
-      { id: '1', name: 'Bench Press', equipment: 'Činka, Lavice' },
-      { id: '2', name: 'Kliky', equipment: 'Vlastní váha' },
-      { id: '3', name: 'Cable Crossover', equipment: 'Kladky' }
-    ],
-    back: [
-      { id: '4', name: 'Deadlift', equipment: 'Činka' },
-      { id: '5', name: 'Pull-ups', equipment: 'Hrazda' },
-      { id: '6', name: 'Bent Over Row', equipment: 'Činka' }
-    ],
-    legs: [
-      { id: '7', name: 'Squat', equipment: 'Činka' },
-      { id: '8', name: 'Leg Press', equipment: 'Stroj' },
-      { id: '9', name: 'Lunges', equipment: 'Jednoručky' }
-    ],
-    arms: [
-      { id: '10', name: 'Biceps Curls', equipment: 'Jednoručky' },
-      { id: '11', name: 'Triceps Extensions', equipment: 'Kladka' },
-      { id: '12', name: 'Hammer Curls', equipment: 'Jednoručky' }
-    ],
-    core: [
-      { id: '13', name: 'Plank', equipment: 'Vlastní váha' },
-      { id: '14', name: 'Russian Twist', equipment: 'Medicinbal' },
-      { id: '15', name: 'Leg Raises', equipment: 'Lavička' }
-    ]
-  };
-
-  const currentExercises = exercises[type as string] || [];
+  const currentExercises: Exercise[] = (EXERCISES[type as string] as Exercise[]) || [];
 
   return (
     <ThemedView style={styles.container}>

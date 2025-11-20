@@ -31,21 +31,21 @@ export default function HomeScreen() {
             
             <ThemedView style={styles.actionRow}>
               <TouchableOpacity style={styles.smallButton}>
-                <ThemedText style={styles.smallButtonText}>📊 Dnešní trénink</ThemedText>
+                <ThemedText style={styles.smallButtonText}>Dnešní trénink</ThemedText>
               </TouchableOpacity>
               
               <TouchableOpacity style={styles.smallButton}>
-                <ThemedText style={styles.smallButtonText}>➕ Přidat cvik </ThemedText>
+                <ThemedText style={styles.smallButtonText}>Přidat cvik</ThemedText>
               </TouchableOpacity>
             </ThemedView>
 
             <ThemedView style={styles.actionRow}>
               <TouchableOpacity style={styles.smallButton}>
-                <ThemedText style={styles.smallButtonText}>📈 Statistiky</ThemedText>
+                <ThemedText style={styles.smallButtonText}>Statistiky</ThemedText>
               </TouchableOpacity>
               
               <TouchableOpacity style={styles.smallButton}>
-                <ThemedText style={styles.smallButtonText}>⚙️ Nastavení</ThemedText>
+                <ThemedText style={styles.smallButtonText}>Nastavení</ThemedText>
               </TouchableOpacity>
             </ThemedView>
           </ThemedView>
@@ -62,25 +62,25 @@ export default function HomeScreen() {
 
           <ThemedView style={styles.features}>
             <ThemedView style={styles.featureItem}>
-              <ThemedText style={styles.featureIcon}>💯</ThemedText>
+              <ThemedText style={styles.featureIcon}></ThemedText>
               <ThemedText style={styles.featureText}>Sleduj pokroky </ThemedText>
             </ThemedView>
             
             <ThemedView style={styles.featureItem}>
-              <ThemedText style={styles.featureIcon}>🏋️</ThemedText>
+              <ThemedText style={styles.featureIcon}></ThemedText>
               <ThemedText style={styles.featureText}>500+ cviků</ThemedText>
             </ThemedView>
             
 <Link href="/(tabs)/muscleselect" asChild>
             <TouchableOpacity style={styles.startButton}>
               <ThemedText type="defaultSemiBold" style={styles.buttonText}>
-                🧍‍♂️ Výběr svalové partie
+                Výběr svalové partie
               </ThemedText>
             </TouchableOpacity>
           </Link>
 
             <ThemedView style={styles.featureItem}>
-              <ThemedText style={styles.featureIcon}>📊</ThemedText>
+              <ThemedText style={styles.featureIcon}></ThemedText>
               <ThemedText style={styles.featureText}>Statistiky</ThemedText>
             </ThemedView>
           </ThemedView>

@@ -7,7 +7,7 @@ export type Exercise = {
   primaryMuscles?: string[];
   secondaryMuscles?: string[];
   difficulty?: Difficulty;
-  instructions?: string;
+  instructions?: string | string[];
   videoUrl?: string;
 };
 

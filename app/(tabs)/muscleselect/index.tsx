@@ -11,7 +11,7 @@ const MUSCLE_OPTIONS = [
       { slug: "upper-back" as Slug, intensity: 2 },
       { slug: "lower-back" as Slug, intensity: 2 }
     ] },
-  { key: "shoulders", label: "Ramena", data: [{ slug: "deltoids" as Slug, intensity: 2 }] },
+  { key: "deltoids", label: "Ramena", data: [{ slug: "deltoids" as Slug, intensity: 2 }] },
   { key: "biceps", label: "Biceps", data: [{ slug: "biceps" as Slug, intensity: 2 }] },
   { key: "triceps", label: "Triceps", data: [{ slug: "triceps" as Slug, intensity: 2 }] },
   { key: "forearm", label: "Předloktí", data: [{ slug: "forearm" as Slug, intensity: 2 }] },
@@ -21,7 +21,7 @@ const MUSCLE_OPTIONS = [
   { key: "calves", label: "Lýtka", data: [{ slug: "calves" as Slug, intensity: 2 }] },
   // Trapézy a hýždě (slugs použité v knihovně)
   { key: "trapezius", label: "Trapézy", data: [{ slug: "trapezius" as Slug, intensity: 2 }] },
-  { key: "glutes", label: "Hýždě", data: [{ slug: "gluteal" as Slug, intensity: 2 }] },
+  { key: "gluteal", label: "Hýždě", data: [{ slug: "gluteal" as Slug, intensity: 2 }] },
 ];
 
 export default function MuscleSelectScreen() {
@@ -30,33 +30,18 @@ export default function MuscleSelectScreen() {
   const [side, setSide] = useState<"front" | "back">("front");
 
   const handleBodyPartPress = (bodyPart: any) => {
+    console.log('handleBodyPartPress called:', bodyPart);
     const found = MUSCLE_OPTIONS.find(option =>
       option.data.some(d => d.slug === bodyPart.slug)
     );
     if (found) setSelected(found);
   };
 
+  
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <ThemedText type="title" style={styles.title}>
-          {selected ? selected.label : ""}
-        </ThemedText>
-
-        <View style={styles.bodyPreview}>
-          <Body
-            data={selected ? selected.data : []}
-            gender="male"
-            side={side}
-            scale={1.3}
-            border="#D32F2F"
-            colors={["#D32F2F", "#fff"]}
-            onBodyPartPress={handleBodyPartPress}
-          />
-        </View>
-
-        {/* Header buttons (absolute) - Back (left) and Flip (right) */}
-        <View style={styles.header} pointerEvents="box-none">
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="always">
+        <View style={styles.headerInline}>
           <TouchableOpacity
             style={styles.headerButton}
             onPress={() => router.back()}
@@ -73,6 +58,30 @@ export default function MuscleSelectScreen() {
             <ThemedText style={styles.headerButtonText}>Otočit</ThemedText>
           </TouchableOpacity>
         </View>
+
+        <ThemedText type="title" style={styles.title}>
+          {selected ? selected.label : ""}
+        </ThemedText>
+
+        <View
+          style={[styles.bodyPreview, styles.body]}
+          
+        >
+          <Body
+            data={selected ? selected.data : []}
+            gender="male"
+            side={side}
+            scale={1.4}
+            border="#D32F2F"
+            colors={["#D32F2F", "#fff"]}
+            onBodyPartPress={handleBodyPartPress}
+          />
+
+          
+          </View>
+        
+
+        
 
         <View style={styles.selectorRow}>
           {/* Pokud je něco vybrané, zobraz pouze ten vybraný prvek; jinak zobraz všechny */}
@@ -124,12 +133,19 @@ export default function MuscleSelectScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000" },
-  content: { alignItems: "center", paddingHorizontal: 24, paddingVertical: 32 },
-  title: { fontSize: 28, color: "#D32F2F", fontWeight: "bold", marginBottom: 16 },
+  content: { alignItems: "center", paddingHorizontal: 24, paddingVertical: 48 },
+  title: { fontSize: 28, color: "#D32F2F", fontWeight: "bold", marginBottom: 6 },
   bodyPreview: {
     width: "100%",
     alignItems: "center",
+    justifyContent: "center",
     marginBottom: 24,
+    paddingVertical: 12,
+    height: 520,
+    marginTop: 0,
+  },
+  body: {
+    zIndex: 100,
   },
   selectorRow: {
     flexDirection: "row",
@@ -174,16 +190,14 @@ const styles = StyleSheet.create({
     borderColor: "#333",
   },
   flipButtonText: { color: "#fff", fontSize: 14, fontWeight: "600" },
-  header: {
-    position: "absolute",
-    top: 12,
-    left: 0,
-    right: 0,
+  headerInline: {
+    width: "100%",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 12,
-    zIndex: 10,
+    marginBottom: 12,
+    marginTop: 6,
   },
   headerButton: {
     backgroundColor: "rgba(17,17,17,0.9)",
@@ -192,6 +206,23 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "#333",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  headerButtonText: { color: "#fff", fontSize: 14, fontWeight: "600" },
+  headerButtonText: { color: "#fff", fontSize: 14, fontWeight: "600", lineHeight: 18, textAlignVertical: "center" as any },
+  overlayContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 20,
+  },
+  overlayZone: {
+    position: 'absolute',
+    backgroundColor: 'rgba(255,0,0,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,0,0,0.6)',
+    borderRadius: 8,
+  },
 });

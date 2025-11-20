@@ -1,8 +1,8 @@
+import EXERCISES from '@/app/exercise/data';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link, useLocalSearchParams } from 'expo-router';
-import EXERCISES from '@/src/data/exercises';
 import { Exercise } from '@/src/data/types';
+import { Link, useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 
 export default function MuscleScreen() {
@@ -26,7 +26,7 @@ export default function MuscleScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <ThemedView style={styles.content}>
           <ThemedText type="title" style={styles.title}>
-            💪 {muscleNames[type as string] || 'Partie'}
+            {muscleNames[type as string] || 'Partie'}
           </ThemedText>
           
           <ThemedText style={styles.exerciseCount}>

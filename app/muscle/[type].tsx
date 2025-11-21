@@ -1,12 +1,18 @@
+export const unstable_settings = { headerShown: false };
+
 import EXERCISES from '@/app/exercise/data';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Exercise } from '@/src/data/types';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Link, useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function MuscleScreen() {
   const { type } = useLocalSearchParams();
+  const [sortOpen, setSortOpen] = useState(false);
+  const [sortMode, setSortMode] = useState<'az' | 'za' | 'diff-asc' | 'diff-desc'>('az');
   
   const muscleNames: { [key: string]: string } = {
     chest: 'Prsní svaly',
@@ -21,6 +27,27 @@ export default function MuscleScreen() {
 
   const currentExercises: Exercise[] = (EXERCISES[type as string] as Exercise[]) || [];
 
+  const difficultyValue = (ex: Exercise) => {
+    if (!ex || !ex.difficulty) return 1;
+    return ex.difficulty === 'hard' ? 3 : ex.difficulty === 'medium' ? 2 : 1;
+  };
+
+  const sortedExercises = useMemo(() => {
+    const arr = (currentExercises || []).slice();
+    switch (sortMode) {
+      case 'az':
+        return arr.sort((a, b) => a.name.localeCompare(b.name));
+      case 'za':
+        return arr.sort((a, b) => b.name.localeCompare(a.name));
+      case 'diff-asc':
+        return arr.sort((a, b) => difficultyValue(a) - difficultyValue(b));
+      case 'diff-desc':
+        return arr.sort((a, b) => difficultyValue(b) - difficultyValue(a));
+      default:
+        return arr;
+    }
+  }, [currentExercises, sortMode]);
+
   return (
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -29,22 +56,68 @@ export default function MuscleScreen() {
             {muscleNames[type as string] || 'Partie'}
           </ThemedText>
           
-          <ThemedText style={styles.exerciseCount}>
-            {currentExercises.length} cviků
-          </ThemedText>
+          <View style={styles.headerRow}>
+            <ThemedText style={styles.exerciseCount}>{currentExercises.length} cviků</ThemedText>
+
+            <View style={styles.sortContainer}>
+              <TouchableOpacity
+                style={styles.sortButton}
+                onPress={() => setSortOpen(o => !o)}
+                accessibilityLabel="Seřadit cviky"
+              >
+                <MaterialIcons name="sort" size={18} color="#fff" />
+              </TouchableOpacity>
+
+              {sortOpen && (
+                <View style={styles.sortMenu}>
+                  <TouchableOpacity style={styles.sortMenuItem} onPress={() => { setSortMode('az'); setSortOpen(false); }}>
+                    <ThemedText style={styles.sortMenuText}>A → Z</ThemedText>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.sortMenuItem} onPress={() => { setSortMode('za'); setSortOpen(false); }}>
+                    <ThemedText style={styles.sortMenuText}>Z → A</ThemedText>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.sortMenuItem} onPress={() => { setSortMode('diff-asc'); setSortOpen(false); }}>
+                    <ThemedText style={styles.sortMenuText}>Obtížnost ↑</ThemedText>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.sortMenuItem} onPress={() => { setSortMode('diff-desc'); setSortOpen(false); }}>
+                    <ThemedText style={styles.sortMenuText}>Obtížnost ↓</ThemedText>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>
 
           <ThemedView style={styles.exercisesList}>
-            {currentExercises.map((exercise) => (
-              <Link key={exercise.id} href={`/exercise/${exercise.id}`} asChild>
-                <TouchableOpacity style={styles.exerciseCard}>
-                  <ThemedText style={styles.exerciseName}>{exercise.name}</ThemedText>
-                  <ThemedText style={styles.exerciseEquipment}>{exercise.equipment}</ThemedText>
-                </TouchableOpacity>
-              </Link>
-            ))}
+            {sortedExercises.map((exercise) => {
+              const stars = exercise.difficulty === 'hard' ? 3 : exercise.difficulty === 'medium' ? 2 : 1;
+              return (
+                <Link key={exercise.id} href={`/exercise/${exercise.id}`} asChild>
+                  <TouchableOpacity style={styles.exerciseCard}>
+                    <View style={styles.exerciseRow}>
+                      <View style={{ flex: 1 }}>
+                        <ThemedText style={styles.exerciseName}>{exercise.name}</ThemedText>
+                        <ThemedText style={styles.exerciseEquipment}>{exercise.equipment}</ThemedText>
+                      </View>
+
+                      <View style={styles.stars}>
+                        {[0, 1, 2].map(i => (
+                          <MaterialIcons
+                            key={i}
+                            name={i < stars ? 'star' : 'star-border'}
+                            size={16}
+                            color={i < stars ? '#fff' : '#888'}
+                            style={{ marginLeft: 4 }}
+                          />
+                        ))}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                </Link>
+              );
+            })}
           </ThemedView>
 
-          <Link href="/explore" asChild>
+          <Link href="/(tabs)/muscleselect" asChild>
             <TouchableOpacity style={styles.backButton}>
               <ThemedText style={styles.backButtonText}>← Zpět na výběr partií</ThemedText>
             </TouchableOpacity>
@@ -83,9 +156,55 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 30,
   },
+  headerRow: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  sortContainer: {
+    position: 'relative',
+  },
+  sortButton: {
+    backgroundColor: 'transparent',
+    padding: 6,
+    borderRadius: 8,
+  },
+  sortMenu: {
+    position: 'absolute',
+    right: 0,
+    top: 36,
+    backgroundColor: '#111',
+    borderWidth: 1,
+    borderColor: '#333',
+    borderRadius: 8,
+    paddingVertical: 8,
+    minWidth: 140,
+    zIndex: 500,
+    elevation: 12,
+  },
+  sortMenuItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  sortMenuText: {
+    color: '#fff',
+    fontSize: 14,
+  },
   exercisesList: {
     width: '100%',
     marginBottom: 30,
+  },
+  exerciseRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  stars: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
   },
   exerciseCard: {
     backgroundColor: '#1a1a1a',

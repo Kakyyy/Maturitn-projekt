@@ -1,13 +1,14 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Link } from 'expo-router';
-import { ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { SafeAreaView, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 
 export default function HomeScreen() {
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <ThemedView style={styles.content}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <ThemedView style={styles.content}>
           
           <ThemedView style={styles.header}>
             <ThemedText type="title" style={styles.appTitle}>
@@ -71,22 +72,25 @@ export default function HomeScreen() {
               <ThemedText style={styles.featureText}>500+ cviků</ThemedText>
             </ThemedView>
             
-<Link href="/(tabs)/muscleselect" asChild>
-            <TouchableOpacity style={styles.startButton}>
-              <ThemedText type="defaultSemiBold" style={styles.buttonText}>
-                Výběr svalové partie
-              </ThemedText>
-            </TouchableOpacity>
-          </Link>
-
             <ThemedView style={styles.featureItem}>
               <ThemedText style={styles.featureIcon}></ThemedText>
               <ThemedText style={styles.featureText}>Statistiky</ThemedText>
             </ThemedView>
           </ThemedView>
 
+          <ThemedView style={styles.centerButtonContainer}>
+            <Link href="/(tabs)/muscleselect" asChild>
+              <TouchableOpacity style={[styles.startButton, styles.centeredButton, styles.centeredButtonVisual]} accessibilityRole="button" accessibilityLabel="Výběr svalové partie">
+                <ThemedText type="defaultSemiBold" style={styles.buttonText}>
+                  Výběr svalové partie
+                </ThemedText>
+              </TouchableOpacity>
+            </Link>
+          </ThemedView>
+
         </ThemedView>
-      </ScrollView>
+        </ScrollView>
+      </SafeAreaView>
     </ThemedView>
   );
 }
@@ -103,14 +107,16 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 40,
+    paddingTop: 64,
+    paddingBottom: 40,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 60,
+    marginBottom: 40,
   },
   appTitle: {
-    fontSize: 52,
+    fontSize: 56,
+    lineHeight: 68,
     fontWeight: 'bold',
     color: '#D32F2F',
     textAlign: 'center',
@@ -125,15 +131,18 @@ const styles = StyleSheet.create({
   },
   startButton: {
     backgroundColor: '#D32F2F',
-    paddingHorizontal: 50,
-    paddingVertical: 20,
+    paddingHorizontal: 40,
+    paddingVertical: 16,
     borderRadius: 30,
     shadowColor: '#D32F2F',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
     elevation: 12,
-    marginBottom: 40,
+    marginBottom: 24,
+    alignSelf: 'stretch',
+    width: '100%',
+    maxWidth: 420,
   },
   buttonText: {
     color: '#FFFFFF',
@@ -149,19 +158,19 @@ const styles = StyleSheet.create({
   },
   quickActions: {
     width: '100%',
-    marginBottom: 30,
+    marginBottom: 24,
   },
   actionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 15,
+    marginBottom: 12,
   },
   smallButton: {
     backgroundColor: '#1a1a1a',
-    padding: 15,
+    padding: 14,
     borderRadius: 12,
-    flex: 1,
-    marginHorizontal: 5,
+    width: '48%',
+    marginHorizontal: 0,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#333',
@@ -217,5 +226,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     opacity: 0.7,
     textAlign: 'center',
+  },
+  centerButtonContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 12,
+    marginBottom: 18,
+  },
+  centeredButton: {
+    alignSelf: 'center',
+    width: '90%',
+    maxWidth: 420,
+  },
+  centeredButtonVisual: {
+    backgroundColor: '#D32F2F',
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 32,
+    borderWidth: 1,
+    borderColor: '#B71C1C',
+    shadowColor: '#D32F2F',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 10,
   },
 });

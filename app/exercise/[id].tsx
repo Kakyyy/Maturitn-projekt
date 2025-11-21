@@ -1,7 +1,9 @@
+export const unstable_settings = { headerShown: false };
+
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Link, useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import EXERCISES from './data';
 
 export default function ExerciseScreen() {
@@ -43,10 +45,10 @@ export default function ExerciseScreen() {
             }
           </ThemedView>
 
-          <Link href="/explore" asChild>
-            <ThemedView style={styles.backLink}>
-              <ThemedText style={styles.backLinkText}>← Zpět na výběr partií</ThemedText>
-            </ThemedView>
+          <Link href="/(tabs)/muscleselect" asChild>
+            <TouchableOpacity style={styles.backButton}>
+              <ThemedText style={styles.backButtonText}>← Zpět na výběr partií</ThemedText>
+            </TouchableOpacity>
           </Link>
 
         </ThemedView>
@@ -114,11 +116,15 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     lineHeight: 22,
   },
-  backLink: {
+  backButton: {
+    backgroundColor: '#1a1a1a',
     padding: 15,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#333',
   },
-  backLinkText: {
-    color: '#D32F2F',
+  backButtonText: {
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },

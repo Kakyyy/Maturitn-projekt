@@ -1,14 +1,18 @@
 export const unstable_settings = { headerShown: false };
 
+// Import komponent a databáze cviků
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import EXERCISES from './data';
 
+// Obrazovka s detailním popisem konkrétního cviku (instrukce, svaly, vybavení)
 export default function ExerciseScreen() {
+  // Získání ID cviku z URL parametru
   const { id } = useLocalSearchParams();
 
+  // Vyhledání cviku podle ID v databázi
   const all = Object.values(EXERCISES).flat();
   const exercise = all.find((e) => e.id === id) || all[0];
 

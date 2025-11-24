@@ -1,5 +1,6 @@
 export const unstable_settings = { headerShown: false };
 
+// Import databáze cviků, komponent a typů
 import EXERCISES from '@/app/exercise/data';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -9,11 +10,16 @@ import { Link, useLocalSearchParams } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
+// Obrazovka zobrazující cviky pro konkrétní svalovou partii s možností řazení
 export default function MuscleScreen() {
+  // Získání typu svalové partie z URL parametru
   const { type } = useLocalSearchParams();
+  // State pro zobrazení/skrytí menu s možnostmi řazení
   const [sortOpen, setSortOpen] = useState(false);
+  // Aktuální režim řazení (abecedně, podle obtížnosti atd.)
   const [sortMode, setSortMode] = useState<'az' | 'za' | 'diff-asc' | 'diff-desc'>('az');
   
+  // Mapování klíčů svalových partií na jejich české názvy
   const muscleNames: { [key: string]: string } = {
     chest: 'Prsní svaly',
     back: 'Zádové svaly',
@@ -25,13 +31,16 @@ export default function MuscleScreen() {
     core: 'Břišní svaly'
   };
 
+  // Získání cviků pro aktuální svalovou partii
   const currentExercises: Exercise[] = (EXERCISES[type as string] as Exercise[]) || [];
 
+  // Převod obtížnosti na číselnou hodnotu pro řazení
   const difficultyValue = (ex: Exercise) => {
     if (!ex || !ex.difficulty) return 1;
     return ex.difficulty === 'hard' ? 3 : ex.difficulty === 'medium' ? 2 : 1;
   };
 
+  // Seřazení cviků podle zvoleného režimu (abecedně nebo podle obtížnosti)
   const sortedExercises = useMemo(() => {
     const arr = (currentExercises || []).slice();
     switch (sortMode) {

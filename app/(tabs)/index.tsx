@@ -1,8 +1,10 @@
+// Import komponent a navigace
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Link } from 'expo-router';
 import { SafeAreaView, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 
+// Domovská obrazovka aplikace s úvodním CTA tlačítkem a rychlými akcemi
 export default function HomeScreen() {
   return (
     <ThemedView style={styles.container}>
@@ -20,7 +22,7 @@ export default function HomeScreen() {
           </ThemedView>
 
           <Link href="/explore" asChild>
-            <TouchableOpacity style={styles.startButton}>
+            <TouchableOpacity style={[styles.startButton, styles.centeredButtonVisual]}>
               <ThemedText type="defaultSemiBold" style={styles.buttonText}>
                 ZAČNEME!
               </ThemedText>
@@ -69,7 +71,7 @@ export default function HomeScreen() {
             
             <ThemedView style={styles.featureItem}>
               <ThemedText style={styles.featureIcon}></ThemedText>
-              <ThemedText style={styles.featureText}>500+ cviků</ThemedText>
+              <ThemedText style={styles.featureText}>50 cviků</ThemedText>
             </ThemedView>
             
             <ThemedView style={styles.featureItem}>
@@ -78,15 +80,7 @@ export default function HomeScreen() {
             </ThemedView>
           </ThemedView>
 
-          <ThemedView style={styles.centerButtonContainer}>
-            <Link href="/(tabs)/muscleselect" asChild>
-              <TouchableOpacity style={[styles.startButton, styles.centeredButton, styles.centeredButtonVisual]} accessibilityRole="button" accessibilityLabel="Výběr svalové partie">
-                <ThemedText type="defaultSemiBold" style={styles.buttonText}>
-                  Výběr svalové partie
-                </ThemedText>
-              </TouchableOpacity>
-            </Link>
-          </ThemedView>
+          {/* Removed the explicit muscle-selection CTA per design request */}
 
         </ThemedView>
         </ScrollView>
@@ -142,6 +136,11 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     alignSelf: 'stretch',
     width: '100%',
+    maxWidth: 420,
+  },
+  startButtonCentered: {
+    alignSelf: 'center',
+    width: '70%',
     maxWidth: 420,
   },
   buttonText: {

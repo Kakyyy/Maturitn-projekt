@@ -1,3 +1,4 @@
+// Import databáze cviků, komponent a ikon
 import EXERCISES from '@/app/exercise/data';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -6,29 +7,34 @@ import { Link, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
+// Obrazovka databáze cviků s filtrováním podle kategorií
 export default function ExploreScreen() {
+  // State pro aktuálně vybranou kategorii (výchozí: Nejoblíbenější)
   const [selectedCategory, setSelectedCategory] = useState('Nejoblíbenější');
   const router = useRouter();
 
-  // animations
+  // Animace pro postupné zobrazení titulku a seznamu cviků
   const titleAnim = useRef(new Animated.Value(0)).current;
   const listAnim = useRef(new Animated.Value(0)).current;
 
+  // Získání všech cviků ze všech kategorií
   const allExercises = useMemo(() => Object.values(EXERCISES).flat(), []);
 
+  // Spuštění animací při načtení komponenty (nejprve titulek, pak seznam)
   useEffect(() => {
-    // title in, then list
     Animated.sequence([
-      Animated.timing(titleAnim, { toValue: 1, duration: 420, useNativeDriver: true }),
-      Animated.timing(listAnim, { toValue: 1, duration: 420, useNativeDriver: true }),
+      Animated.timing(titleAnim, { toValue: 1, duration: 420, useNativeDriver: false }),
+      Animated.timing(listAnim, { toValue: 1, duration: 420, useNativeDriver: false }),
     ]).start();
   }, [titleAnim, listAnim]);
 
+  // Převod obtížnosti cviku na číselnou hodnotu (lehký=1, střední=2, těžký=3)
   const difficultyValue = (ex: any) => {
     if (!ex || !ex.difficulty) return 1;
     return ex.difficulty === 'hard' ? 3 : ex.difficulty === 'medium' ? 2 : 1;
   };
 
+  // Filtrování a řazení cviků podle vybrané kategorie (max 5 cviků)
   const filteredExercises = useMemo(() => {
     const arr = (allExercises || []).slice();
     switch (selectedCategory) {
@@ -82,7 +88,13 @@ export default function ExploreScreen() {
                     { [0,1,2].map(i => {
                       const stars = ex.difficulty === 'hard' ? 3 : ex.difficulty === 'medium' ? 2 : 1;
                       return (
-                        <MaterialIcons key={i} name={i < stars ? 'star' : 'star-border'} size={16} color={i < stars ? '#fff' : '#888'} style={{ marginLeft: 4 }} />
+                        <MaterialIcons
+                          key={i}
+                          name={i < stars ? 'star' : 'star-border'}
+                          size={16}
+                          color={i < stars ? '#fff' : '#888'}
+                          style={{ marginLeft: 4 }}
+                        />
                       );
                     }) }
                   </View>
@@ -123,16 +135,14 @@ export default function ExploreScreen() {
           </ThemedView>
 
           <ThemedView style={styles.actionButtons}>
-            <TouchableOpacity style={styles.actionButton}>
-              <ThemedText style={styles.actionButtonText}>📥 Uložit trénink</ThemedText>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.actionButton}>
-              <ThemedText style={styles.actionButtonText}>🔄 Nový trénink</ThemedText>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.actionButton}>
-              <ThemedText style={styles.actionButtonText}>📤 Exportovat</ThemedText>
+            <Link href={'/(tabs)/new-workout'} asChild>
+              <TouchableOpacity style={[styles.primaryActionButton, { marginRight: 8 }]}> 
+                <ThemedText style={styles.primaryActionButtonText}>Nový trénink</ThemedText>
+              </TouchableOpacity>
+            </Link>
+
+            <TouchableOpacity style={[styles.primaryActionButton, { marginLeft: 8 }]}> 
+              <ThemedText style={styles.primaryActionButtonText}>Moje tréninky</ThemedText>
             </TouchableOpacity>
           </ThemedView>
 
@@ -200,6 +210,7 @@ const styles = StyleSheet.create({
   dbTitleWrap: {
     width: '100%',
     alignItems: 'center',
+    marginTop: 8,
   },
   headerButton: {
     backgroundColor: 'rgba(17,17,17,0.9)',
@@ -286,6 +297,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 3,
   },
+  exerciseRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  stars: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
   exerciseEquipment: {
     color: '#666',
     fontSize: 12,
@@ -309,6 +330,22 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
+    textAlign: 'center',
+  },
+  primaryActionButton: {
+    backgroundColor: '#D32F2F',
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    flex: 1,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#B71C1C',
+  },
+  primaryActionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
     textAlign: 'center',
   },
 });

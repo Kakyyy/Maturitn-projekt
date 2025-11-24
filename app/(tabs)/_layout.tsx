@@ -1,3 +1,4 @@
+// Import komponent, ikon a konfigurace
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Tabs } from 'expo-router';
 import React from 'react';
@@ -8,8 +9,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-// muscle icon asset
-
+// Layout pro spodní navigační lištu (tab bar) s 4 záložkami
 export default function TabLayout() {
   const colorScheme = useColorScheme();
 
@@ -43,6 +43,17 @@ export default function TabLayout() {
             tabBarLabel: 'Výběr cviků',
             tabBarIcon: ({ color }) => (
               <MaterialIcons name="fitness-center" size={26} color={color} />
+            ),
+          }}
+        />
+
+        <Tabs.Screen
+          name="new-workout"
+          options={{
+            title: 'Nový',
+            tabBarLabel: 'Nový',
+            tabBarIcon: ({ color }) => (
+              <MaterialIcons name="add" size={24} color={color} />
             ),
           }}
         />

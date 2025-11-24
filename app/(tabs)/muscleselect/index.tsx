@@ -1,11 +1,13 @@
+// Import komponent a knihovny pro zobrazování 3D modelu těla
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Link, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import { Animated, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
-import Body, { Slug } from "react-native-body-highlighter"; // Import Slug type
+import Body, { Slug } from "react-native-body-highlighter";
 
+// Definice svalových partií a jejich mapování na 3D model
 const MUSCLE_OPTIONS = [
   { key: "chest", label: "Hrudník", data: [{ slug: "chest" as Slug, intensity: 2 }] },
   { key: "back", label: "Záda", data: [
@@ -25,18 +27,22 @@ const MUSCLE_OPTIONS = [
   { key: "gluteal", label: "Hýždě", data: [{ slug: "gluteal" as Slug, intensity: 2 }] },
 ];
 
+// Obrazovka pro výběr svalové partie s interaktivním 3D modelem těla
 export default function MuscleSelectScreen() {
   const router = useRouter();
+  // State pro aktuálně vybranou svalovou partii
   const [selected, setSelected] = useState<null | typeof MUSCLE_OPTIONS[0]>(null);
+  // Přepnutí mezi přední a zadní stranou těla
   const [side, setSide] = useState<"front" | "back">("front");
-  // selector open/close and entrance animation
+  // Stav otevření/zavření seznamu svalových partií
   const [selectorOpen, setSelectorOpen] = useState(true);
+  // Animace pro postupné zobrazení obsahu a pro rozbalování seznamu
   const entranceAnim = useRef(new Animated.Value(0)).current;
   const openAnim = useRef(new Animated.Value(selectorOpen ? 1 : 0)).current;
   const MAX_SELECTOR_HEIGHT = 240;
 
   useEffect(() => {
-    Animated.timing(entranceAnim, { toValue: 1, duration: 420, useNativeDriver: true }).start();
+    Animated.timing(entranceAnim, { toValue: 1, duration: 420, useNativeDriver: false }).start();
   }, [entranceAnim]);
 
   useEffect(() => {

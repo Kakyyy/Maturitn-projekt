@@ -1,3 +1,4 @@
+// Import cviků ze všech svalových kategorií
 import ABS from '../abs';
 import BACK from '../back';
 import BICEPS from '../biceps';
@@ -13,6 +14,7 @@ import TRICEPS from '../triceps';
 
 import { ExerciseMap } from '@/src/data/types';
 
+// Hlavní objekt databáze - mapuje svalovou partii na pole cviků
 export const EXERCISES: ExerciseMap = {
   chest: CHEST,
   back: BACK,

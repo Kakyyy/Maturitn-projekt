@@ -338,9 +338,9 @@ export default function NewWorkoutScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   content: { paddingHorizontal: 12, paddingTop: 48, paddingBottom: 24 },
-  headerInline: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 0, marginTop: 6, marginBottom: 12 },
-  headerButton: { backgroundColor: 'rgba(17,17,17,0.9)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#333' },
-  headerButtonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  headerInline: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, marginTop: 6, marginBottom: 12 },
+  headerButton: { backgroundColor: 'rgba(17,17,17,0.9)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#333', justifyContent: 'center', alignItems: 'center' },
+  headerButtonText: { color: '#fff', fontSize: 14, fontWeight: '600', lineHeight: 18, textAlignVertical: 'center' as any },
   title: { fontSize: 28, color: '#D32F2F', fontWeight: '800', textAlign: 'center' },
   titleBelowHeader: { marginTop: 8, marginBottom: 6 },
   slots: { marginTop: 18 },

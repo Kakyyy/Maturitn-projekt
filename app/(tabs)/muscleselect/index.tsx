@@ -50,26 +50,26 @@ export default function MuscleSelectScreen() {
   }, [selectorOpen, openAnim]);
 
   const handleBodyPartPress = (bodyPart: any) => {
-    console.log('handleBodyPartPress called:', bodyPart);
+    console.log('Body part pressed:', bodyPart);
     const found = MUSCLE_OPTIONS.find(option =>
       option.data.some(d => d.slug === bodyPart.slug)
     );
     if (found) {
+      console.log('Found muscle:', found.label);
       setSelected(found);
       // auto-rotate for back-facing muscles
-      if (found.key === 'back' || found.key === 'hamstring') {
+      if (found.key === 'back' || found.key === 'hamstring' || found.key === 'gluteal' || found.key === 'trapezius') {
         setSide('back');
       } else {
         setSide('front');
       }
-      // keep selector visible
     }
   };
 
   
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="always">
+      <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerInline}>
           <TouchableOpacity
             style={styles.headerButton}
@@ -94,7 +94,6 @@ export default function MuscleSelectScreen() {
 
         <View
           style={[styles.bodyPreview, styles.body]}
-          
         >
           <Body
             data={selected ? selected.data : []}
@@ -104,11 +103,8 @@ export default function MuscleSelectScreen() {
             border="#D32F2F"
             colors={["#D32F2F", "#fff"]}
             onBodyPartPress={handleBodyPartPress}
-            
           />
-
-          
-          </View>
+        </View>
         
 
         
@@ -150,15 +146,15 @@ export default function MuscleSelectScreen() {
                   selected && selected.key === option.key && styles.muscleButtonActive,
                 ]}
                 onPress={() => {
+                  console.log('Button pressed:', option.label);
                   setSelected(option);
                   // auto-rotate when selecting back-facing muscles
-                  if (option.key === 'back' || option.key === 'hamstring' || option.key === 'gluteal') {
+                  if (option.key === 'back' || option.key === 'hamstring' || option.key === 'gluteal' || option.key === 'trapezius') {
                     setSide('back');
                   } else {
                     setSide('front');
                   }
-                  // close selector after selection
-                  setSelectorOpen(false);
+                  // keep selector open so they can see the body update
                 }}
               >
                 <ThemedText
@@ -199,7 +195,7 @@ export default function MuscleSelectScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000" },
   content: { alignItems: "center", paddingHorizontal: 24, paddingVertical: 48 },
-  title: { fontSize: 28, color: "#D32F2F", fontWeight: "bold", marginBottom: 2 },
+  title: { fontSize: 28, color: "#D32F2F", fontWeight: "800", marginBottom: 2 },
   bodyPreview: {
     width: "100%",
     alignItems: "center",
@@ -208,6 +204,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     height: 520,
     marginTop: 0,
+    backgroundColor: 'transparent',
   },
   body: {
     zIndex: 100,

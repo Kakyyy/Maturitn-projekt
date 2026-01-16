@@ -2,10 +2,25 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Link } from 'expo-router';
-import { SafeAreaView, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { addDoc, collection } from 'firebase/firestore';
+import { Alert, SafeAreaView, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { db } from '../../firebase';
 
 // Domovská obrazovka aplikace s úvodním CTA tlačítkem a rychlými akcemi
 export default function HomeScreen() {
+  const testFirebase = async () => {
+    try {
+      await addDoc(collection(db, "test"), {
+        message: "Firebase funguje",
+        time: Date.now(),
+      });
+      Alert.alert("Úspěch", "ZAPSÁNO DO FIREBASE ✅");
+    } catch (e) {
+      console.error(e);
+      Alert.alert("Chyba", "CHYBA ❌");
+    }
+  };
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={{ flex: 1 }}>
@@ -20,6 +35,10 @@ export default function HomeScreen() {
               Tvá cesta k maximální síle a formě
             </ThemedText>
           </ThemedView>
+
+          <TouchableOpacity style={styles.testButton} onPress={testFirebase}>
+            <ThemedText style={styles.testButtonText}>Test Firebase</ThemedText>
+          </TouchableOpacity>
 
           <Link href="/explore" asChild>
             <TouchableOpacity style={[styles.startButton, styles.centeredButtonVisual]}>
@@ -249,5 +268,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 10,
+  },
+  testButton: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+    marginVertical: 16,
+    alignSelf: 'center',
+  },
+  testButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -14,6 +14,11 @@ export default function ProfileScreen() {
   const [goal, setGoal] = useState<'strength' | 'mass' | 'endurance' | ''>('');
   const [profileImage, setProfileImage] = useState<string | null>(null);
 
+  // Navigace zpět po kliknutí na Uložit změny
+  const handleSave = () => {
+    router.back();
+  };
+
   const goals = [
     { key: 'strength', label: 'Síla', icon: 'fitness-center' },
     { key: 'mass', label: 'Svalová hmota', icon: 'trending-up' },
@@ -135,7 +140,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.saveButton}>
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <ThemedText style={styles.saveButtonText}>Uložit změny</ThemedText>
         </TouchableOpacity>
 

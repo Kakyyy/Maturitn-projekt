@@ -50,8 +50,8 @@ export default function TabLayout() {
         <Tabs.Screen
           name="new-workout"
           options={{
-            title: 'Nový',
-            tabBarLabel: 'Nový',
+            title: 'Trénink',
+            tabBarLabel: 'Trénink',
             tabBarIcon: ({ color }) => (
               <MaterialIcons name="add" size={24} color={color} />
             ),

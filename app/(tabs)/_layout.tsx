@@ -1,76 +1,37 @@
-// Import komponent, ikon a konfigurace
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Tabs } from 'expo-router';
+// Stránka: Tabs Layout (Layout s drawer navigací)
+
+import DrawerMenu from '@/components/drawer-menu';
+import { DrawerProvider, useDrawer } from '@/contexts/DrawerContext';
+import { Stack } from 'expo-router';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-// Layout pro spodní navigační lištu (tab bar) s 4 záložkami
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+function LayoutContent() {
+  const { isOpen, closeDrawer } = useDrawer();
 
   return (
-    <View style={{ flex: 1 }}>
-      <Tabs
+    <>
+      <Stack
         screenOptions={{
-          tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
           headerShown: false,
-          tabBarButton: HapticTab,
-        }}>
-        <Tabs.Screen
-          name="index"
-          options={{
-            title: 'Domů',
-            tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-          }}
-        />
-
-        <Tabs.Screen
-          name="explore"
-          options={{
-            title: 'Hledat',
-            tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-          }}
-        />
-
-        <Tabs.Screen
-          name="muscleselect/index"
-          options={{
-            tabBarLabel: 'Výběr cviků',
-            tabBarIcon: ({ color }) => (
-              <MaterialIcons name="fitness-center" size={26} color={color} />
-            ),
-          }}
-        />
-
-        <Tabs.Screen
-          name="new-workout"
-          options={{
-            title: 'Trénink',
-            tabBarLabel: 'Trénink',
-            tabBarIcon: ({ color }) => (
-              <MaterialIcons name="add" size={24} color={color} />
-            ),
-          }}
-        />
-
-        <Tabs.Screen
-          name="profile"
-          options={{
-            title: 'Profil',
-            tabBarLabel: 'Profil',
-            tabBarIcon: ({ color }) => (
-              <MaterialIcons name="person" size={24} color={color} />
-            ),
-          }}
-        />
-      </Tabs>
-    </View>
+        }}
+      >
+        <Stack.Screen name="index" />
+        <Stack.Screen name="explore" />
+        <Stack.Screen name="muscleselect/index" />
+        <Stack.Screen name="new-workout" />
+        <Stack.Screen name="profile" />
+      </Stack>
+      
+      <DrawerMenu visible={isOpen} onClose={closeDrawer} />
+    </>
   );
 }
 
-const styles = StyleSheet.create({});
+// Layout pro aplikaci s drawer menu místo spodní navigační lišty
+export default function TabLayout() {
+  return (
+    <DrawerProvider>
+      <LayoutContent />
+    </DrawerProvider>
+  );
+}

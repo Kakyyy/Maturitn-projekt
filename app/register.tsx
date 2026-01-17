@@ -1,3 +1,5 @@
+// Stránka: Register (Registrace)
+
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useRouter } from 'expo-router';

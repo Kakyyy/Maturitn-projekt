@@ -1,7 +1,11 @@
+// Stránka: Explore (Procházení cviků)
+
 // Import databáze cviků, komponent a ikon
 import EXERCISES from '@/app/exercise/data';
+import MenuButton from '@/components/menu-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useDrawer } from '@/contexts/DrawerContext';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Link, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -12,6 +16,7 @@ export default function ExploreScreen() {
   // State pro aktuálně vybranou kategorii (výchozí: Nejoblíbenější)
   const [selectedCategory, setSelectedCategory] = useState('Nejoblíbenější');
   const router = useRouter();
+  const { openDrawer } = useDrawer();
 
   // Animace pro postupné zobrazení titulku a seznamu cviků
   const titleAnim = useRef(new Animated.Value(0)).current;
@@ -109,23 +114,16 @@ export default function ExploreScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <View style={styles.topBar}>
+        <MenuButton onPress={openDrawer} />
+        <Animated.View style={{ opacity: titleAnim }}>
+          <ThemedText style={styles.topBarTitle}>Databáze cviků</ThemedText>
+        </Animated.View>
+        <View style={{ width: 44 }} />
+      </View>
+      
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <ThemedView style={styles.content}>
-          <View style={styles.headerContainer}>
-            <View style={styles.headerInlineTop}>
-              <TouchableOpacity style={styles.headerButton} onPress={() => router.back()} accessibilityLabel="Zpět">
-                <ThemedText style={styles.headerButtonText}>← Zpět</ThemedText>
-              </TouchableOpacity>
-              <View style={{ width: 40 }} />
-            </View>
-
-            <Animated.View style={[styles.dbTitleWrap, { opacity: titleAnim, transform: [{ translateY: titleAnim.interpolate({ inputRange: [0,1], outputRange: [12,0] }) }] }]}>
-              <ThemedText type="title" style={styles.dbTitle}>
-                Databáze cviků
-              </ThemedText>
-            </Animated.View>
-          </View>
-
           <ThemedView style={styles.popularExercises}>
             <ThemedText style={styles.sectionTitleWhite}>Cviky:</ThemedText>
 
@@ -157,6 +155,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000000',
   },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    paddingTop: 50,
+    paddingBottom: 12,
+    backgroundColor: '#000',
+  },
+  topBarTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#D32F2F',
+  },
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 40,
@@ -165,7 +177,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 40,
+    paddingVertical: 16,
   },
   title: {
     fontSize: 38,
@@ -280,22 +292,22 @@ const styles = StyleSheet.create({
   },
   exerciseCard: {
     backgroundColor: '#1a1a1a',
-    padding: 20,
+    padding: 14,
     borderRadius: 12,
-    marginBottom: 15,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: '#333',
   },
   exerciseName: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 5,
+    marginBottom: 4,
   },
   exerciseMuscle: {
     color: '#D32F2F',
-    fontSize: 14,
-    marginBottom: 3,
+    fontSize: 13,
+    marginBottom: 2,
   },
   exerciseRow: {
     flexDirection: 'row',

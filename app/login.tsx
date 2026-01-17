@@ -1,3 +1,5 @@
+// Stránka: Login (Přihlášení)
+
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useRouter } from 'expo-router';
@@ -64,6 +66,12 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.content}>
+            <View style={styles.logoContainer}>
+              <ThemedText style={styles.logoText}>
+                Power<ThemedText style={styles.logoTextAccent}>Gainz</ThemedText>
+              </ThemedText>
+            </View>
+            
             <ThemedText type="title" style={styles.title}>
               Přihlášení
             </ThemedText>
@@ -147,6 +155,22 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 24,
     paddingVertical: 48,
+  },
+  logoContainer: {
+    alignSelf: 'center',
+    marginBottom: 32,
+  },
+  logoText: {
+    fontSize: 48,
+    fontWeight: '900',
+    color: '#fff',
+    letterSpacing: -1,
+    lineHeight: 58,
+    paddingVertical: 4,
+  },
+  logoTextAccent: {
+    color: '#D32F2F',
+    fontWeight: '900',
   },
   title: {
     fontSize: 32,

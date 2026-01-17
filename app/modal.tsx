@@ -1,3 +1,5 @@
+// Stránka: Modal (Modální okno)
+
 import { Link } from 'expo-router';
 import { StyleSheet } from 'react-native';
 

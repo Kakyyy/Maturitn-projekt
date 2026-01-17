@@ -1,44 +1,35 @@
+// Stránka: Home (Domovská stránka - tréninkový deník)
+
 // Import komponent a navigace
+import MenuButton from '@/components/menu-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useDrawer } from '@/contexts/DrawerContext';
 import { Link } from 'expo-router';
-import { addDoc, collection } from 'firebase/firestore';
-import { Alert, SafeAreaView, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
-import { db } from '../../firebase';
+import { SafeAreaView, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 // Domovská obrazovka aplikace s úvodním CTA tlačítkem a rychlými akcemi
 export default function HomeScreen() {
-  const testFirebase = async () => {
-    try {
-      await addDoc(collection(db, "test"), {
-        message: "Firebase funguje",
-        time: Date.now(),
-      });
-      Alert.alert("Úspěch", "ZAPSÁNO DO FIREBASE ✅");
-    } catch (e) {
-      console.error(e);
-      Alert.alert("Chyba", "CHYBA ❌");
-    }
-  };
+  const { openDrawer } = useDrawer();
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={{ flex: 1 }}>
+        <View style={styles.menuButtonContainer}>
+          <MenuButton onPress={openDrawer} />
+        </View>
+        
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <ThemedView style={styles.content}>
           
           <ThemedView style={styles.header}>
-            <ThemedText type="title" style={styles.appTitle}>
-              PowerGainz
+            <ThemedText style={styles.logoText}>
+              Power<ThemedText style={styles.logoTextAccent}>Gainz</ThemedText>
             </ThemedText>
             <ThemedText type="subtitle" style={styles.slogan}>
               Tvá cesta k maximální síle a formě
             </ThemedText>
           </ThemedView>
-
-          <TouchableOpacity style={styles.testButton} onPress={testFirebase}>
-            <ThemedText style={styles.testButtonText}>Test Firebase</ThemedText>
-          </TouchableOpacity>
 
           <Link href="/explore" asChild>
             <TouchableOpacity style={[styles.startButton, styles.centeredButtonVisual]}>
@@ -113,6 +104,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000000',
   },
+  menuButtonContainer: {
+    position: 'absolute',
+    top: 50,
+    left: 8,
+    zIndex: 10,
+  },
   scrollContent: {
     flexGrow: 1,
   },
@@ -127,13 +124,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
-  appTitle: {
+  logoText: {
     fontSize: 56,
-    lineHeight: 68,
-    fontWeight: 'bold',
-    color: '#D32F2F',
+    fontWeight: '900',
+    color: '#fff',
+    letterSpacing: -2,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
+    lineHeight: 68,
+    paddingVertical: 4,
+  },
+  logoTextAccent: {
+    color: '#D32F2F',
+    fontWeight: '900',
   },
   slogan: {
     fontSize: 22,
@@ -268,18 +271,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 10,
-  },
-  testButton: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 24,
-    marginVertical: 16,
-    alignSelf: 'center',
-  },
-  testButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

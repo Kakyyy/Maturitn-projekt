@@ -1,6 +1,10 @@
+// Stránka: Muscle Select (Výběr svalové partie pomocí 3D modelu)
+
 // Import komponent a knihovny pro zobrazování 3D modelu těla
+import MenuButton from '@/components/menu-button';
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { useDrawer } from '@/contexts/DrawerContext';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Link, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -30,6 +34,7 @@ const MUSCLE_OPTIONS = [
 // Obrazovka pro výběr svalové partie s interaktivním 3D modelem těla
 export default function MuscleSelectScreen() {
   const router = useRouter();
+  const { openDrawer } = useDrawer();
   // State pro aktuálně vybranou svalovou partii
   const [selected, setSelected] = useState<null | typeof MUSCLE_OPTIONS[0]>(null);
   // Přepnutí mezi přední a zadní stranou těla
@@ -69,15 +74,13 @@ export default function MuscleSelectScreen() {
   
   return (
     <ThemedView style={styles.container}>
+      <View style={styles.menuButtonContainer}>
+        <MenuButton onPress={openDrawer} />
+      </View>
+      
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerInline}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={() => router.back()}
-            accessibilityLabel="Zpět"
-          >
-            <ThemedText style={styles.headerButtonText}>← Zpět</ThemedText>
-          </TouchableOpacity>
+          <View style={{ width: 40 }} />
 
           <TouchableOpacity
             style={styles.headerButton}
@@ -194,6 +197,12 @@ export default function MuscleSelectScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000" },
+  menuButtonContainer: {
+    position: 'absolute',
+    top: 50,
+    left: 8,
+    zIndex: 10,
+  },
   content: { alignItems: "center", paddingHorizontal: 24, paddingVertical: 48 },
   title: { fontSize: 28, color: "#D32F2F", fontWeight: "800", marginBottom: 2 },
   bodyPreview: {

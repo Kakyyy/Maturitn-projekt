@@ -1,17 +1,25 @@
+// Stránka: New Workout (Nový trénink)
+
 // Import databáze cviků a komponent
 import EXERCISES from '@/app/exercise/data';
+import MenuButton from '@/components/menu-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
-import React, { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useDrawer } from '@/contexts/DrawerContext';
+import { db } from '@/firebase';
+import { useRouter } from 'expo-router';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 
 // Obrazovka pro vytváření nového tréninku
 export default function NewWorkoutScreen() {
+  const { openDrawer, setNavigationBlocker, checkNavigationAllowed } = useDrawer();
+  const { user } = useAuth();
+  const router = useRouter();
   // State pro uchování tréninkových slotů (jednotlivé dny/tréninky)
-  const [slots, setSlots] = useState(() => [
-    { id: 'slot-1', name: 'Trénink 1', exercises: [] as any[] },
-  ]);
+  const [slots, setSlots] = useState<any[]>([]);
   // State pro vyhledávání cviků
   const [searchQuery, setSearchQuery] = useState<{ [key: string]: string }>({});
   // State pro editaci názvu slotu
@@ -20,13 +28,66 @@ export default function NewWorkoutScreen() {
   const [activeSearchSlot, setActiveSearchSlot] = useState<string | null>(null);
   // State pro vlastní dialogy
   const [customDialog, setCustomDialog] = useState<{ visible: boolean; title: string; message: string; buttons: any[] }>({ visible: false, title: '', message: '', buttons: [] });
+  // State pro ukládání tréninku
+  const [isSaving, setIsSaving] = useState(false);
+  // State pro sledování neuložených změn
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Získání všech cviků ze všech svalových partií
   const allExercises = Object.values(EXERCISES).flat();
 
+  // Sledování změn ve slotech pro detekci neuložených změn
+  useEffect(() => {
+    if (slots.length > 0) {
+      setHasUnsavedChanges(true);
+    } else {
+      setHasUnsavedChanges(false);
+    }
+  }, [slots]);
+
+  // Registrace navigation blockeru pro kontrolu před odchodem ze stránky
+  useEffect(() => {
+    const blocker = hasUnsavedChanges && slots.length > 0
+      ? async (): Promise<boolean> => {
+          return new Promise<boolean>((resolve) => {
+            setCustomDialog({
+              visible: true,
+              title: 'Neuložené změny',
+              message: 'Máte neuložené změny. Opravdu chcete odejít bez uložení?',
+              buttons: [
+                {
+                  text: 'Zrušit',
+                  onPress: () => {
+                    setCustomDialog({ visible: false, title: '', message: '', buttons: [] });
+                    resolve(false);
+                  },
+                  style: 'cancel'
+                },
+                {
+                  text: 'Odejít',
+                  onPress: () => {
+                    setCustomDialog({ visible: false, title: '', message: '', buttons: [] });
+                    setHasUnsavedChanges(false);
+                    resolve(true);
+                  },
+                  style: 'destructive'
+                }
+              ]
+            });
+          });
+        }
+      : null;
+
+    setNavigationBlocker(blocker);
+
+    return () => {
+      setNavigationBlocker(null);
+    };
+  }, [hasUnsavedChanges, slots, setNavigationBlocker]);
+
   // Funkce pro přidání nového slotu
   function addNewSlot() {
-    const newId = `slot-${slots.length + 1}`;
+    const newId = `slot-${Date.now()}`;
     const newName = `Trénink ${slots.length + 1}`;
     setSlots(s => [...s, { id: newId, name: newName, exercises: [] }]);
   }
@@ -56,7 +117,7 @@ export default function NewWorkoutScreen() {
           onPress: () => {
             setSlots(s => s.map(slot => {
               if (slot.id !== slotId) return slot;
-              const next = slot.exercises.filter((_, idx) => idx !== exIndex);
+              const next = slot.exercises.filter((_: any, idx: number) => idx !== exIndex);
               return { ...slot, exercises: next };
             }));
             setCustomDialog({ visible: false, title: '', message: '', buttons: [] });
@@ -110,20 +171,120 @@ export default function NewWorkoutScreen() {
     }));
   }
 
+  // Funkce pro uložení tréninku do Firebase
+  async function saveWorkout() {
+    if (!user) {
+      setCustomDialog({
+        visible: true,
+        title: 'Nepřihlášen',
+        message: 'Pro uložení tréninku se musíte přihlásit.',
+        buttons: [
+          {
+            text: 'OK',
+            onPress: () => setCustomDialog({ visible: false, title: '', message: '', buttons: [] }),
+            style: 'cancel'
+          }
+        ]
+      });
+      return;
+    }
+
+    // Kontrola, zda jsou vyplněné všechny tréninky
+    const emptyWorkouts = slots.filter(slot => slot.exercises.length === 0);
+    if (emptyWorkouts.length > 0) {
+      setCustomDialog({
+        visible: true,
+        title: 'Prázdné tréninky',
+        message: 'Některé tréninky nemají žádné cviky. Chcete je přesto uložit?',
+        buttons: [
+          {
+            text: 'Zrušit',
+            onPress: () => setCustomDialog({ visible: false, title: '', message: '', buttons: [] }),
+            style: 'cancel'
+          },
+          {
+            text: 'Uložit',
+            onPress: () => {
+              setCustomDialog({ visible: false, title: '', message: '', buttons: [] });
+              performSave();
+            },
+            style: 'default'
+          }
+        ]
+      });
+      return;
+    }
+
+    await performSave();
+  }
+
+  async function performSave() {
+    setIsSaving(true);
+    try {
+      // Uložíme každý trénink jako samostatný dokument
+      const promises = slots.map(async (slot) => {
+        const workoutData = {
+          userId: user?.uid,
+          name: slot.name,
+          exercises: slot.exercises.map((ex: any) => ({
+            exerciseId: ex.id,
+            exerciseName: ex.name,
+            sets: ex.sets || 0,
+            reps: ex.reps || 0,
+            weight: ex.weight || 0,
+          })),
+          createdAt: serverTimestamp(),
+        };
+
+        return await addDoc(collection(db, 'workouts'), workoutData);
+      });
+
+      await Promise.all(promises);
+
+      setHasUnsavedChanges(false);
+
+      setCustomDialog({
+        visible: true,
+        title: 'Úspěch!',
+        message: `${slots.length} ${slots.length === 1 ? 'trénink byl úspěšně uložen' : 'tréninky byly úspěšně uloženy'}.`,
+        buttons: [
+          {
+            text: 'OK',
+            onPress: () => {
+              setCustomDialog({ visible: false, title: '', message: '', buttons: [] });
+              // Tréninky zůstávají na obrazovce
+            },
+            style: 'default'
+          }
+        ]
+      });
+    } catch (error) {
+      console.error('Chyba při ukládání tréninku:', error);
+      setCustomDialog({
+        visible: true,
+        title: 'Chyba',
+        message: 'Nepodařilo se uložit trénink. Zkuste to prosím znovu.',
+        buttons: [
+          {
+            text: 'OK',
+            onPress: () => setCustomDialog({ visible: false, title: '', message: '', buttons: [] }),
+            style: 'cancel'
+          }
+        ]
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   return (
     <TouchableWithoutFeedback onPress={() => setActiveSearchSlot(null)}>
       <ThemedView style={styles.container}>
-        <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.headerInline}>
-          <Link href="/(tabs)/explore" asChild>
-            <TouchableOpacity style={styles.headerButton} accessibilityLabel="Zpět">
-              <ThemedText style={styles.headerButtonText}>← Zpět</ThemedText>
-            </TouchableOpacity>
-          </Link>
-          <View style={{ width: 40 }} />
+        <View style={styles.menuButtonContainer}>
+          <MenuButton onPress={openDrawer} />
         </View>
-
-        <ThemedText type="title" style={[styles.title, styles.titleBelowHeader]}>Nový trénink</ThemedText>
+        <ScrollView contentContainerStyle={styles.content}>
+        <ThemedText type="title" style={[styles.title, styles.titleBelowHeader]}>Trénink</ThemedText>
 
         <View style={styles.slots}>
           {slots.map(slot => {
@@ -281,7 +442,7 @@ export default function NewWorkoutScreen() {
               </View>
 
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.addScroll}>
-                {filteredExercises.map(ex => (
+                {filteredExercises.map((ex: any) => (
                   <TouchableOpacity key={ex.id} style={styles.addButton} onPress={() => addExerciseToSlot(slot.id, ex)}>
                     <ThemedText style={styles.addButtonText}>{ex.name}</ThemedText>
                   </TouchableOpacity>
@@ -293,6 +454,16 @@ export default function NewWorkoutScreen() {
           
           <TouchableOpacity style={styles.addSlotButton} onPress={addNewSlot}>
             <ThemedText style={styles.addSlotButtonText}>+ Přidat trénink</ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.saveWorkoutButton, (isSaving || slots.length === 0) && styles.saveWorkoutButtonDisabled]} 
+            onPress={saveWorkout}
+            disabled={isSaving || slots.length === 0}
+          >
+            <ThemedText style={[styles.saveWorkoutButtonText, slots.length === 0 && styles.saveWorkoutButtonTextDisabled]}>
+              {isSaving ? 'Ukládám...' : 'Uložit trénink'}
+            </ThemedText>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -309,7 +480,7 @@ export default function NewWorkoutScreen() {
             <ThemedText style={styles.modalTitle}>{customDialog.title}</ThemedText>
             <ThemedText style={styles.modalMessage}>{customDialog.message}</ThemedText>
             <View style={styles.modalButtons}>
-              {customDialog.buttons.map((btn, idx) => (
+              {customDialog.buttons.map((btn: any, idx: number) => (
                 <TouchableOpacity
                   key={idx}
                   style={[
@@ -337,7 +508,13 @@ export default function NewWorkoutScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  content: { paddingHorizontal: 12, paddingTop: 48, paddingBottom: 24 },
+  menuButtonContainer: {
+    position: 'absolute',
+    top: 50,
+    left: 8,
+    zIndex: 10,
+  },
+  content: { paddingHorizontal: 12, paddingTop: 60, paddingBottom: 24 },
   headerInline: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, marginTop: 6, marginBottom: 12 },
   headerButton: { backgroundColor: 'rgba(17,17,17,0.9)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#333', justifyContent: 'center', alignItems: 'center' },
   headerButtonText: { color: '#fff', fontSize: 14, fontWeight: '600', lineHeight: 18, textAlignVertical: 'center' as any },
@@ -385,6 +562,10 @@ const styles = StyleSheet.create({
   addButtonText: { color: '#fff', fontSize: 11 },
   addSlotButton: { backgroundColor: '#1a1a1a', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#444', alignItems: 'center', marginTop: 8 },
   addSlotButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  saveWorkoutButton: { backgroundColor: '#D32F2F', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 16, borderWidth: 1, borderColor: '#D32F2F' },
+  saveWorkoutButtonDisabled: { backgroundColor: '#444', borderColor: '#444', opacity: 0.7 },
+  saveWorkoutButtonText: { color: '#fff', fontSize: 18, fontWeight: '800', textTransform: 'uppercase' },
+  saveWorkoutButtonTextDisabled: { color: '#888' },
   addedExerciseRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#111' },
   selectorsRow: { flexDirection: 'row', alignItems: 'center' },
   selectorList: { alignItems: 'center', paddingVertical: 2 },
@@ -406,4 +587,16 @@ const styles = StyleSheet.create({
   modalButtonDestructive: { backgroundColor: '#D32F2F', borderColor: '#D32F2F' },
   modalButtonText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   modalButtonTextDestructive: { color: '#fff' },
+  // Styly pro uložené tréninky
+  savedWorkoutsSection: { marginBottom: 20, paddingVertical: 12 },
+  sectionTitle: { color: '#fff', fontSize: 18, fontWeight: '700', marginBottom: 12, paddingHorizontal: 4 },
+  savedWorkoutCard: { backgroundColor: '#111', padding: 14, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#333', width: '100%' },
+  savedWorkoutHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  savedWorkoutInfo: { flex: 1, marginRight: 12 },
+  savedWorkoutName: { color: '#fff', fontSize: 16, fontWeight: '700', marginBottom: 4 },
+  savedWorkoutExerciseCount: { color: '#888', fontSize: 12 },
+  savedWorkoutButtons: { flexDirection: 'row', gap: 8 },
+  savedWorkoutButton: { backgroundColor: '#D32F2F', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, alignItems: 'center', minWidth: 70 },
+  savedWorkoutButtonDelete: { backgroundColor: '#444', paddingHorizontal: 14, minWidth: 40 },
+  savedWorkoutButtonText: { color: '#fff', fontSize: 13, fontWeight: '700' },
 });

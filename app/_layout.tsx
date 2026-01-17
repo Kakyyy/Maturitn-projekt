@@ -1,3 +1,5 @@
+// Stránka: Root Layout (Kořenový layout aplikace)
+
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';

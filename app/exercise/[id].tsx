@@ -1,3 +1,5 @@
+// Stránka: Exercise Detail (Detail cviku)
+
 export const unstable_settings = { headerShown: false };
 
 // Import komponent a databáze cviků

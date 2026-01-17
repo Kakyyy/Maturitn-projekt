@@ -1,3 +1,5 @@
+// Stránka: Muscle Type (Detail svalové partie)
+
 export const unstable_settings = { headerShown: false };
 
 // Import databáze cviků, komponent a typů

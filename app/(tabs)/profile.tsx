@@ -1,22 +1,134 @@
+// Stránka: Profile (Uživatelský profil)
+
+import MenuButton from '@/components/menu-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useDrawer } from '@/contexts/DrawerContext';
+import { auth, db } from '@/firebase';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import * as FileSystem from 'expo-file-system';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { openDrawer } = useDrawer();
   const [name, setName] = useState('');
+  const [surname, setSurname] = useState('');
   const [age, setAge] = useState('');
   const [weight, setWeight] = useState('');
   const [height, setHeight] = useState('');
   const [goal, setGoal] = useState<'strength' | 'mass' | 'endurance' | ''>('');
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
-  // Navigace zpět po kliknutí na Uložit změny
-  const handleSave = () => {
-    router.back();
+  // Původní hodnoty pro detekci změn
+  const [originalData, setOriginalData] = useState({
+    name: '',
+    surname: '',
+    age: '',
+    weight: '',
+    height: '',
+    goal: '' as 'strength' | 'mass' | 'endurance' | '',
+    profileImage: null as string | null,
+  });
+
+  // Načtení dat z Firestore při otevření stránky
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        const docRef = doc(db, 'users', user.uid);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const loadedData = {
+            name: data.name || '',
+            surname: data.surname || '',
+            age: data.age?.toString() || '',
+            weight: data.weight?.toString() || '',
+            height: data.height?.toString() || '',
+            goal: (data.goal || '') as 'strength' | 'mass' | 'endurance' | '',
+            profileImage: data.profileImage || null,
+          };
+          
+          setName(loadedData.name);
+          setSurname(loadedData.surname);
+          setAge(loadedData.age);
+          setWeight(loadedData.weight);
+          setHeight(loadedData.height);
+          setGoal(loadedData.goal);
+          setProfileImage(loadedData.profileImage);
+          setOriginalData(loadedData);
+        }
+      }
+    } catch (error) {
+      console.error('Chyba při načítání profilu:', error);
+      Alert.alert('Chyba', 'Nepodařilo se načíst profil');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Kontrola, zda byly provedeny změny
+  const hasChanges = () => {
+    return (
+      name !== originalData.name ||
+      surname !== originalData.surname ||
+      age !== originalData.age ||
+      weight !== originalData.weight ||
+      height !== originalData.height ||
+      goal !== originalData.goal ||
+      profileImage !== originalData.profileImage
+    );
+  };
+
+  // Uložení dat do Firestore
+  const handleSave = async () => {
+    if (!hasChanges()) return; // Neukládat, pokud nejsou změny
+    
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        await setDoc(doc(db, 'users', user.uid), {
+          name,
+          surname,
+          age: age ? parseInt(age) : null,
+          weight: weight ? parseFloat(weight) : null,
+          height: height ? parseFloat(height) : null,
+          goal,
+          profileImage,
+          email: user.email,
+          updatedAt: new Date().toISOString(),
+        });
+        
+        // Aktualizovat původní data po uložení
+        setOriginalData({
+          name,
+          surname,
+          age,
+          weight,
+          height,
+          goal,
+          profileImage,
+        });
+        
+        Alert.alert('Úspěch', 'Profil byl úspěšně uložen');
+        router.back();
+      }
+    } catch (error) {
+      console.error('Chyba při ukládání profilu:', error);
+      Alert.alert('Chyba', 'Nepodařilo se uložit profil');
+    }
   };
 
   const goals = [
@@ -25,32 +137,78 @@ export default function ProfileScreen() {
     { key: 'endurance', label: 'Vytrvalost', icon: 'directions-run' },
   ];
 
-  const handleImagePick = () => {
-    // Zatím jen placeholder - napojí se později s databází
-    console.log('Výběr profilové fotky');
+  const handleImagePick = async () => {
+    try {
+      // Požádat o oprávnění k přístupu k fotogalerii
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Oprávnění odmítnuto', 'Pro výběr profilové fotky potřebujeme přístup k vašim fotkám.');
+        return;
+      }
+
+      // Otevřít výběr fotky
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setUploading(true);
+        await uploadImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Chyba při výběru fotky:', error);
+      Alert.alert('Chyba', 'Nepodařilo se vybrat fotku');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const uploadImage = async (uri: string) => {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        Alert.alert('Chyba', 'Uživatel není přihlášen');
+        return;
+      }
+
+      // Převést obrázek na base64
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: 'base64',
+      });
+
+      // Vytvořit data URI
+      const imageData = `data:image/jpeg;base64,${base64}`;
+
+      // Aktualizovat stav
+      setProfileImage(imageData);
+      
+      Alert.alert('Úspěch', 'Profilová fotka byla nahrána');
+    } catch (error: any) {
+      console.error('Chyba při nahrávání fotky:', error);
+      Alert.alert('Chyba', 'Nepodařilo se nahrát fotku');
+    }
   };
 
   return (
     <ThemedView style={styles.container}>
+      <View style={styles.menuButtonContainer}>
+        <MenuButton onPress={openDrawer} />
+      </View>
+      
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.headerInline}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={() => router.back()}
-            accessibilityLabel="Zpět"
-          >
-            <ThemedText style={styles.headerButtonText}>← Zpět</ThemedText>
-          </TouchableOpacity>
-          <View style={{ width: 40 }} />
-        </View>
-
         <View style={styles.titleRow}>
           <ThemedText type="title" style={styles.title}>Profil</ThemedText>
-          <TouchableOpacity style={styles.profileImageContainer} onPress={handleImagePick}>
-            {profileImage ? (
-              <View style={styles.profileImage}>
-                {/* Zde bude později Image component */}
+          <TouchableOpacity style={styles.profileImageContainer} onPress={handleImagePick} disabled={uploading}>
+            {uploading ? (
+              <View style={styles.profileImagePlaceholder}>
+                <ActivityIndicator size="small" color="#D32F2F" />
               </View>
+            ) : profileImage ? (
+              <Image source={{ uri: profileImage }} style={styles.profileImage} />
             ) : (
               <View style={styles.profileImagePlaceholder}>
                 <MaterialIcons name="add-a-photo" size={28} color="#666" />
@@ -60,15 +218,28 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.section}>
-          <View style={styles.inputGroup}>
-            <ThemedText style={styles.label}>Jméno</ThemedText>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Zadejte jméno"
-              placeholderTextColor="#666"
-            />
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+              <ThemedText style={styles.label}>Jméno</ThemedText>
+              <TextInput
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                placeholder="Zadejte jméno"
+                placeholderTextColor="#666"
+              />
+            </View>
+
+            <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+              <ThemedText style={styles.label}>Příjmení</ThemedText>
+              <TextInput
+                style={styles.input}
+                value={surname}
+                onChangeText={setSurname}
+                placeholder="Zadejte příjmení"
+                placeholderTextColor="#666"
+              />
+            </View>
           </View>
 
           <View style={styles.row}>
@@ -140,7 +311,14 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+        <TouchableOpacity 
+          style={[
+            styles.saveButton,
+            !hasChanges() && styles.saveButtonDisabled
+          ]} 
+          onPress={handleSave}
+          disabled={!hasChanges()}
+        >
           <ThemedText style={styles.saveButtonText}>Uložit změny</ThemedText>
         </TouchableOpacity>
 
@@ -171,36 +349,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
+  menuButtonContainer: {
+    position: 'absolute',
+    top: 50,
+    left: 8,
+    zIndex: 10,
+  },
   content: {
     paddingHorizontal: 24,
-    paddingVertical: 40,
+    paddingVertical: 60,
     paddingBottom: 100,
-  },
-  headerInline: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    marginBottom: 12,
-    marginTop: 6,
-  },
-  headerButton: {
-    backgroundColor: 'rgba(17,17,17,0.9)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#333',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-    lineHeight: 18,
-    textAlignVertical: 'center' as any,
   },
   titleRow: {
     flexDirection: 'row',
@@ -301,6 +459,10 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     marginBottom: 32,
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#666',
+    opacity: 0.5,
   },
   saveButtonText: {
     fontSize: 16,

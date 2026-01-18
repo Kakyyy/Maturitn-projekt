@@ -1,0 +1,23 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users collection - uživatelé mohou číst a upravovat pouze svá vlastní data
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Workouts collection - uživatelé mohou číst a upravovat pouze své vlastní tréninky
+    match /workouts/{workoutId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+    
+    // Blokovat přístup ke všem ostatním kolekcím
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

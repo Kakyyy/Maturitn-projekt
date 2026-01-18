@@ -6,12 +6,10 @@ import { ThemedView } from '@/components/themed-view';
 import { useDrawer } from '@/contexts/DrawerContext';
 import { auth, db } from '@/firebase';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import * as FileSystem from 'expo-file-system';
-import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -22,9 +20,7 @@ export default function ProfileScreen() {
   const [weight, setWeight] = useState('');
   const [height, setHeight] = useState('');
   const [goal, setGoal] = useState<'strength' | 'mass' | 'endurance' | ''>('');
-  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
 
   // Původní hodnoty pro detekci změn
   const [originalData, setOriginalData] = useState({
@@ -34,7 +30,6 @@ export default function ProfileScreen() {
     weight: '',
     height: '',
     goal: '' as 'strength' | 'mass' | 'endurance' | '',
-    profileImage: null as string | null,
   });
 
   // Načtení dat z Firestore při otevření stránky
@@ -58,7 +53,6 @@ export default function ProfileScreen() {
             weight: data.weight?.toString() || '',
             height: data.height?.toString() || '',
             goal: (data.goal || '') as 'strength' | 'mass' | 'endurance' | '',
-            profileImage: data.profileImage || null,
           };
           
           setName(loadedData.name);
@@ -67,7 +61,6 @@ export default function ProfileScreen() {
           setWeight(loadedData.weight);
           setHeight(loadedData.height);
           setGoal(loadedData.goal);
-          setProfileImage(loadedData.profileImage);
           setOriginalData(loadedData);
         }
       }
@@ -87,8 +80,7 @@ export default function ProfileScreen() {
       age !== originalData.age ||
       weight !== originalData.weight ||
       height !== originalData.height ||
-      goal !== originalData.goal ||
-      profileImage !== originalData.profileImage
+      goal !== originalData.goal
     );
   };
 
@@ -106,7 +98,6 @@ export default function ProfileScreen() {
           weight: weight ? parseFloat(weight) : null,
           height: height ? parseFloat(height) : null,
           goal,
-          profileImage,
           email: user.email,
           updatedAt: new Date().toISOString(),
         });
@@ -119,7 +110,6 @@ export default function ProfileScreen() {
           weight,
           height,
           goal,
-          profileImage,
         });
         
         Alert.alert('Úspěch', 'Profil byl úspěšně uložen');
@@ -137,85 +127,17 @@ export default function ProfileScreen() {
     { key: 'endurance', label: 'Vytrvalost', icon: 'directions-run' },
   ];
 
-  const handleImagePick = async () => {
-    try {
-      // Požádat o oprávnění k přístupu k fotogalerii
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      if (status !== 'granted') {
-        Alert.alert('Oprávnění odmítnuto', 'Pro výběr profilové fotky potřebujeme přístup k vašim fotkám.');
-        return;
-      }
-
-      // Otevřít výběr fotky
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.5,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        setUploading(true);
-        await uploadImage(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error('Chyba při výběru fotky:', error);
-      Alert.alert('Chyba', 'Nepodařilo se vybrat fotku');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const uploadImage = async (uri: string) => {
-    try {
-      const user = auth.currentUser;
-      if (!user) {
-        Alert.alert('Chyba', 'Uživatel není přihlášen');
-        return;
-      }
-
-      // Převést obrázek na base64
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: 'base64',
-      });
-
-      // Vytvořit data URI
-      const imageData = `data:image/jpeg;base64,${base64}`;
-
-      // Aktualizovat stav
-      setProfileImage(imageData);
-      
-      Alert.alert('Úspěch', 'Profilová fotka byla nahrána');
-    } catch (error: any) {
-      console.error('Chyba při nahrávání fotky:', error);
-      Alert.alert('Chyba', 'Nepodařilo se nahrát fotku');
-    }
-  };
-
   return (
     <ThemedView style={styles.container}>
-      <View style={styles.menuButtonContainer}>
-        <MenuButton onPress={openDrawer} />
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <MenuButton onPress={openDrawer} />
+          <ThemedText style={styles.headerTitle}>Profil</ThemedText>
+          <View style={styles.headerSpacer} />
+        </View>
       </View>
       
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.titleRow}>
-          <ThemedText type="title" style={styles.title}>Profil</ThemedText>
-          <TouchableOpacity style={styles.profileImageContainer} onPress={handleImagePick} disabled={uploading}>
-            {uploading ? (
-              <View style={styles.profileImagePlaceholder}>
-                <ActivityIndicator size="small" color="#D32F2F" />
-              </View>
-            ) : profileImage ? (
-              <Image source={{ uri: profileImage }} style={styles.profileImage} />
-            ) : (
-              <View style={styles.profileImagePlaceholder}>
-                <MaterialIcons name="add-a-photo" size={28} color="#666" />
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
 
         <View style={styles.section}>
           <View style={styles.row}>
@@ -349,51 +271,36 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
-  menuButtonContainer: {
-    position: 'absolute',
-    top: 50,
-    left: 8,
-    zIndex: 10,
+  header: {
+    backgroundColor: '#D32F2F',
+    paddingTop: 44,
+    paddingBottom: 14,
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerSpacer: {
+    width: 40,
   },
   content: {
     paddingHorizontal: 24,
-    paddingVertical: 60,
+    paddingVertical: 24,
     paddingBottom: 100,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 38,
-    fontWeight: '800',
-    color: '#D32F2F',
-    marginBottom: 0,
-  },
-  profileImageContainer: {
-    width: 80,
-    height: 80,
-  },
-  profileImagePlaceholder: {
-    width: 80,
-    height: 80,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#333',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileImage: {
-    width: 80,
-    height: 80,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#D32F2F',
   },
   section: {
     marginBottom: 32,

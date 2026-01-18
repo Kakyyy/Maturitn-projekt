@@ -114,12 +114,12 @@ export default function ExploreScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <View style={styles.topBar}>
-        <MenuButton onPress={openDrawer} />
-        <Animated.View style={{ opacity: titleAnim }}>
-          <ThemedText style={styles.topBarTitle}>Databáze cviků</ThemedText>
-        </Animated.View>
-        <View style={{ width: 44 }} />
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <MenuButton onPress={openDrawer} />
+          <ThemedText style={styles.headerTitle}>Procházení</ThemedText>
+          <View style={styles.headerSpacer} />
+        </View>
       </View>
       
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -155,19 +155,31 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000000',
   },
-  topBar: {
+  header: {
+    backgroundColor: '#D32F2F',
+    paddingTop: 44,
+    paddingBottom: 14,
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    paddingTop: 50,
-    paddingBottom: 12,
-    backgroundColor: '#000',
   },
-  topBarTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#D32F2F',
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerSpacer: {
+    width: 40,
   },
   scrollContent: {
     flexGrow: 1,

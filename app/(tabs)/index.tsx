@@ -15,21 +15,16 @@ export default function HomeScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={{ flex: 1 }}>
-        <View style={styles.menuButtonContainer}>
-          <MenuButton onPress={openDrawer} />
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <MenuButton onPress={openDrawer} />
+            <ThemedText style={styles.headerTitle}>PowerGainz</ThemedText>
+            <View style={styles.headerSpacer} />
+          </View>
         </View>
         
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <ThemedView style={styles.content}>
-          
-          <ThemedView style={styles.header}>
-            <ThemedText style={styles.logoText}>
-              Power<ThemedText style={styles.logoTextAccent}>Gainz</ThemedText>
-            </ThemedText>
-            <ThemedText type="subtitle" style={styles.slogan}>
-              Tvá cesta k maximální síle a formě
-            </ThemedText>
-          </ThemedView>
 
           <Link href="/explore" asChild>
             <TouchableOpacity style={[styles.startButton, styles.centeredButtonVisual]}>
@@ -104,11 +99,31 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000000',
   },
-  menuButtonContainer: {
-    position: 'absolute',
-    top: 50,
-    left: 8,
-    zIndex: 10,
+  header: {
+    backgroundColor: '#D32F2F',
+    paddingTop: 44,
+    paddingBottom: 14,
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerSpacer: {
+    width: 40,
   },
   scrollContent: {
     flexGrow: 1,
@@ -117,33 +132,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 64,
+    paddingTop: 24,
     paddingBottom: 40,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  logoText: {
-    fontSize: 56,
-    fontWeight: '900',
-    color: '#fff',
-    letterSpacing: -2,
-    textAlign: 'center',
-    marginBottom: 8,
-    lineHeight: 68,
-    paddingVertical: 4,
-  },
-  logoTextAccent: {
-    color: '#D32F2F',
-    fontWeight: '900',
-  },
-  slogan: {
-    fontSize: 22,
-    color: '#FFFFFF',
-    textAlign: 'center',
-    opacity: 0.8,
-    lineHeight: 28,
   },
   startButton: {
     backgroundColor: '#D32F2F',

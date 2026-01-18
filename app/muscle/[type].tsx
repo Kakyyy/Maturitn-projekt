@@ -63,40 +63,24 @@ export default function MuscleScreen() {
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <ThemedView style={styles.content}>
-          <ThemedText type="title" style={styles.title}>
-            {muscleNames[type as string] || 'Partie'}
-          </ThemedText>
-          
-          <View style={styles.headerRow}>
-            <ThemedText style={styles.exerciseCount}>{currentExercises.length} cviků</ThemedText>
-
-            <View style={styles.sortContainer}>
-              <TouchableOpacity
-                style={styles.sortButton}
-                onPress={() => setSortOpen(o => !o)}
-                accessibilityLabel="Seřadit cviky"
-              >
-                <MaterialIcons name="sort" size={18} color="#fff" />
+          {sortOpen && (
+            <View style={styles.sortMenu}>
+              <TouchableOpacity style={styles.sortMenuItem} onPress={() => { setSortMode('az'); setSortOpen(false); }}>
+                <ThemedText style={styles.sortMenuText}>A → Z</ThemedText>
               </TouchableOpacity>
-
-              {sortOpen && (
-                <View style={styles.sortMenu}>
-                  <TouchableOpacity style={styles.sortMenuItem} onPress={() => { setSortMode('az'); setSortOpen(false); }}>
-                    <ThemedText style={styles.sortMenuText}>A → Z</ThemedText>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.sortMenuItem} onPress={() => { setSortMode('za'); setSortOpen(false); }}>
-                    <ThemedText style={styles.sortMenuText}>Z → A</ThemedText>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.sortMenuItem} onPress={() => { setSortMode('diff-asc'); setSortOpen(false); }}>
-                    <ThemedText style={styles.sortMenuText}>Obtížnost ↑</ThemedText>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.sortMenuItem} onPress={() => { setSortMode('diff-desc'); setSortOpen(false); }}>
-                    <ThemedText style={styles.sortMenuText}>Obtížnost ↓</ThemedText>
-                  </TouchableOpacity>
-                </View>
-              )}
+              <TouchableOpacity style={styles.sortMenuItem} onPress={() => { setSortMode('za'); setSortOpen(false); }}>
+                <ThemedText style={styles.sortMenuText}>Z → A</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.sortMenuItem} onPress={() => { setSortMode('diff-asc'); setSortOpen(false); }}>
+                <ThemedText style={styles.sortMenuText}>Obtížnost ↑</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.sortMenuItem} onPress={() => { setSortMode('diff-desc'); setSortOpen(false); }}>
+                <ThemedText style={styles.sortMenuText}>Obtížnost ↓</ThemedText>
+              </TouchableOpacity>
             </View>
-          </View>
+          )}
+          
+          <ThemedText style={styles.exerciseCount}>{currentExercises.length} cviků</ThemedText>
 
           <ThemedView style={styles.exercisesList}>
             {sortedExercises.map((exercise) => {
@@ -145,6 +129,29 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000000',
   },
+  header: {
+    backgroundColor: '#D32F2F',
+    paddingTop: 44,
+    paddingBottom: 14,
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+    flex: 1,
+    textAlign: 'center',
+  },
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 40,
@@ -153,39 +160,21 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 40,
-  },
-  title: {
-    fontSize: 38,
-    color: '#D32F2F',
-    textAlign: 'center',
-    marginBottom: 10,
-    fontWeight: 'bold',
+    paddingVertical: 24,
   },
   exerciseCount: {
     fontSize: 16,
     color: '#666',
-    marginBottom: 30,
-  },
-  headerRow: {
+    marginBottom: 20,
     width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  sortContainer: {
-    position: 'relative',
   },
   sortButton: {
-    backgroundColor: 'transparent',
-    padding: 6,
-    borderRadius: 8,
+    padding: 0,
   },
   sortMenu: {
     position: 'absolute',
-    right: 0,
-    top: 36,
+    right: 24,
+    top: 0,
     backgroundColor: '#111',
     borderWidth: 1,
     borderColor: '#333',

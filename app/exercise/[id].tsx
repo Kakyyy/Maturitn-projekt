@@ -5,7 +5,8 @@ export const unstable_settings = { headerShown: false };
 // Import komponent a databáze cviků
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link, useLocalSearchParams } from 'expo-router';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import EXERCISES from './data';
 
@@ -13,6 +14,7 @@ import EXERCISES from './data';
 export default function ExerciseScreen() {
   // Získání ID cviku z URL parametru
   const { id } = useLocalSearchParams();
+  const router = useRouter();
 
   // Vyhledání cviku podle ID v databázi
   const all = Object.values(EXERCISES).flat();
@@ -23,12 +25,18 @@ export default function ExerciseScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <ThemedView style={styles.header}>
+        <ThemedView style={styles.headerContent}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <MaterialIcons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <ThemedText style={styles.headerTitle} numberOfLines={1}>{exercise.name}</ThemedText>
+          <ThemedView style={styles.headerSpacer} />
+        </ThemedView>
+      </ThemedView>
+      
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <ThemedView style={styles.content}>
-          <ThemedText type="title" style={styles.title}>
-            {exercise.name}
-          </ThemedText>
-
           <ThemedText style={styles.muscleGroup}>{muscleLabel}</ThemedText>
 
           <ThemedView style={styles.descriptionCard}>
@@ -68,6 +76,33 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000000',
   },
+  header: {
+    backgroundColor: '#D32F2F',
+    paddingTop: 44,
+    paddingBottom: 14,
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: 8,
+  },
+  headerSpacer: {
+    width: 24,
+  },
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 40,
@@ -76,19 +111,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 40,
-  },
-  title: {
-    fontSize: 38,
-    color: '#D32F2F',
-    textAlign: 'center',
-    marginBottom: 10,
-    fontWeight: 'bold',
+    paddingVertical: 24,
   },
   muscleGroup: {
     fontSize: 18,
     color: '#666',
-    marginBottom: 30,
+    marginBottom: 20,
   },
   descriptionCard: {
     backgroundColor: '#1a1a1a',

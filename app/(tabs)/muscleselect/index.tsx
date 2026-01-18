@@ -74,26 +74,21 @@ export default function MuscleSelectScreen() {
   
   return (
     <ThemedView style={styles.container}>
-      <View style={styles.menuButtonContainer}>
-        <MenuButton onPress={openDrawer} />
-      </View>
-      
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.headerInline}>
-          <View style={{ width: 40 }} />
-
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <MenuButton onPress={openDrawer} />
+          <ThemedText style={styles.headerTitle}>Výběr partie</ThemedText>
           <TouchableOpacity
-            style={styles.headerButton}
+            style={styles.rotateButton}
             onPress={() => setSide(side === "front" ? "back" : "front")}
             accessibilityLabel="Otočit tělo"
           >
-            <ThemedText style={styles.headerButtonText}>Otočit</ThemedText>
+            <ThemedText style={styles.rotateButtonText}>Otočit</ThemedText>
           </TouchableOpacity>
         </View>
-
-        <ThemedText type="title" style={styles.title}>
-          {selected ? selected.label : "Vyberte partii"}
-        </ThemedText>
+      </View>
+      
+      <ScrollView contentContainerStyle={styles.content}>
 
         <View
           style={[styles.bodyPreview, styles.body]}
@@ -197,14 +192,41 @@ export default function MuscleSelectScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000" },
-  menuButtonContainer: {
-    position: 'absolute',
-    top: 50,
-    left: 8,
-    zIndex: 10,
+  header: {
+    backgroundColor: '#D32F2F',
+    paddingTop: 44,
+    paddingBottom: 14,
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
-  content: { alignItems: "center", paddingHorizontal: 24, paddingVertical: 48 },
-  title: { fontSize: 28, color: "#D32F2F", fontWeight: "800", marginBottom: 2 },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+    flex: 1,
+    textAlign: 'center',
+  },
+  rotateButton: {
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  rotateButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  content: { alignItems: "center", paddingHorizontal: 24, paddingVertical: 24 },
   bodyPreview: {
     width: "100%",
     alignItems: "center",

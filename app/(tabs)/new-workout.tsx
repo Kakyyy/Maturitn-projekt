@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useDrawer } from '@/contexts/DrawerContext';
 import { db } from '@/firebase';
 import { useRouter } from 'expo-router';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDocs, query, serverTimestamp, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 
@@ -36,6 +36,11 @@ export default function NewWorkoutScreen() {
   // Získání všech cviků ze všech svalových partií
   const allExercises = Object.values(EXERCISES).flat();
 
+  // Načtení tréninků z Firebase při otevření stránky
+  useEffect(() => {
+    loadWorkouts();
+  }, [user]);
+
   // Sledování změn ve slotech pro detekci neuložených změn
   useEffect(() => {
     if (slots.length > 0) {
@@ -44,6 +49,43 @@ export default function NewWorkoutScreen() {
       setHasUnsavedChanges(false);
     }
   }, [slots]);
+
+  // Funkce pro načtení tréninků z Firebase
+  async function loadWorkouts() {
+    if (!user) return;
+    
+    try {
+      console.log('Loading workouts from Firebase...');
+      const workoutsQuery = query(
+        collection(db, 'workouts'),
+        where('userId', '==', user.uid)
+      );
+      
+      const querySnapshot = await getDocs(workoutsQuery);
+      const loadedSlots: any[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        loadedSlots.push({
+          id: doc.id,
+          name: data.name,
+          exercises: data.exercises.map((ex: any) => ({
+            id: ex.exerciseId,
+            name: ex.exerciseName,
+            sets: ex.sets,
+            reps: ex.reps,
+            weight: ex.weight,
+          }))
+        });
+      });
+      
+      console.log('Loaded workouts:', loadedSlots.length);
+      setSlots(loadedSlots);
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error('Chyba při načítání tréninků:', error);
+    }
+  }
 
   // Registrace navigation blockeru pro kontrolu před odchodem ze stránky
   useEffect(() => {
@@ -95,6 +137,57 @@ export default function NewWorkoutScreen() {
   // Funkce pro přejmenování slotu
   function renameSlot(slotId: string, newName: string) {
     setSlots(s => s.map(slot => slot.id === slotId ? { ...slot, name: newName } : slot));
+  }
+
+  // Funkce pro odstranění tréninku
+  function removeSlot(slotId: string) {
+    const slot = slots.find(s => s.id === slotId);
+    
+    setCustomDialog({
+      visible: true,
+      title: 'Odstranit trénink',
+      message: `Opravdu chcete odstranit trénink "${slot?.name || 'tento trénink'}"?`,
+      buttons: [
+        {
+          text: 'Zrušit',
+          onPress: () => setCustomDialog({ visible: false, title: '', message: '', buttons: [] }),
+          style: 'cancel'
+        },
+        {
+          text: 'Odstranit',
+          onPress: async () => {
+            setCustomDialog({ visible: false, title: '', message: '', buttons: [] });
+            
+            // Pokud má slot Firebase ID (není to lokální slot-xxx), smažeme ho z Firebase
+            if (slotId && !slotId.startsWith('slot-')) {
+              try {
+                await deleteDoc(doc(db, 'workouts', slotId));
+                console.log('Workout deleted from Firebase:', slotId);
+              } catch (error) {
+                console.error('Chyba při mazání tréninku:', error);
+                setCustomDialog({
+                  visible: true,
+                  title: 'Chyba',
+                  message: 'Nepodařilo se odstranit trénink z databáze.',
+                  buttons: [
+                    {
+                      text: 'OK',
+                      onPress: () => setCustomDialog({ visible: false, title: '', message: '', buttons: [] }),
+                      style: 'cancel'
+                    }
+                  ]
+                });
+                return;
+              }
+            }
+            
+            // Odebrat z lokálního stavu
+            setSlots(s => s.filter(slot => slot.id !== slotId));
+          },
+          style: 'destructive'
+        }
+      ]
+    });
   }
 
   // Funkce pro odstranění cviku ze slotu
@@ -173,7 +266,11 @@ export default function NewWorkoutScreen() {
 
   // Funkce pro uložení tréninku do Firebase
   async function saveWorkout() {
+    console.log('saveWorkout called, user:', user?.uid);
+    console.log('slots:', slots);
+    
     if (!user) {
+      console.log('User not logged in');
       setCustomDialog({
         visible: true,
         title: 'Nepřihlášen',
@@ -192,6 +289,7 @@ export default function NewWorkoutScreen() {
     // Kontrola, zda jsou vyplněné všechny tréninky
     const emptyWorkouts = slots.filter(slot => slot.exercises.length === 0);
     if (emptyWorkouts.length > 0) {
+      console.log('Empty workouts detected:', emptyWorkouts.length);
       setCustomDialog({
         visible: true,
         title: 'Prázdné tréninky',
@@ -215,12 +313,18 @@ export default function NewWorkoutScreen() {
       return;
     }
 
+    console.log('All validations passed, calling performSave');
     await performSave();
   }
 
   async function performSave() {
+    console.log('performSave started');
     setIsSaving(true);
     try {
+      console.log('Saving workouts to Firebase...');
+      console.log('User ID:', user?.uid);
+      console.log('Number of slots:', slots.length);
+      
       // Uložíme každý trénink jako samostatný dokument
       const promises = slots.map(async (slot) => {
         const workoutData = {
@@ -236,10 +340,14 @@ export default function NewWorkoutScreen() {
           createdAt: serverTimestamp(),
         };
 
-        return await addDoc(collection(db, 'workouts'), workoutData);
+        console.log('Saving workout:', workoutData);
+        const docRef = await addDoc(collection(db, 'workouts'), workoutData);
+        console.log('Workout saved with ID:', docRef.id);
+        return docRef;
       });
 
       await Promise.all(promises);
+      console.log('All workouts saved successfully');
 
       setHasUnsavedChanges(false);
 
@@ -252,7 +360,7 @@ export default function NewWorkoutScreen() {
             text: 'OK',
             onPress: () => {
               setCustomDialog({ visible: false, title: '', message: '', buttons: [] });
-              // Tréninky zůstávají na obrazovce
+              // Tréninky zůstávají na obrazovce i po uložení
             },
             style: 'default'
           }
@@ -260,10 +368,11 @@ export default function NewWorkoutScreen() {
       });
     } catch (error) {
       console.error('Chyba při ukládání tréninku:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       setCustomDialog({
         visible: true,
         title: 'Chyba',
-        message: 'Nepodařilo se uložit trénink. Zkuste to prosím znovu.',
+        message: `Nepodařilo se uložit trénink. Chyba: ${error instanceof Error ? error.message : 'Neznámá chyba'}`,
         buttons: [
           {
             text: 'OK',
@@ -274,17 +383,21 @@ export default function NewWorkoutScreen() {
       });
     } finally {
       setIsSaving(false);
+      console.log('performSave finished');
     }
   }
 
   return (
     <TouchableWithoutFeedback onPress={() => setActiveSearchSlot(null)}>
       <ThemedView style={styles.container}>
-        <View style={styles.menuButtonContainer}>
-          <MenuButton onPress={openDrawer} />
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <MenuButton onPress={openDrawer} />
+            <ThemedText style={styles.headerTitle}>Trénink</ThemedText>
+            <View style={styles.headerSpacer} />
+          </View>
         </View>
         <ScrollView contentContainerStyle={styles.content}>
-        <ThemedText type="title" style={[styles.title, styles.titleBelowHeader]}>Trénink</ThemedText>
 
         <View style={styles.slots}>
           {slots.map(slot => {
@@ -309,7 +422,7 @@ export default function NewWorkoutScreen() {
                     <ThemedText style={styles.slotTitle}>{slot.name}</ThemedText>
                   </TouchableOpacity>
                 )}
-                <View style={{ flex: 1, position: 'relative' }}>
+                <View style={{ flex: 1, position: 'relative', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <TextInput
                     style={styles.searchInput}
                     value={query}
@@ -318,8 +431,18 @@ export default function NewWorkoutScreen() {
                     placeholder="Vyhledat cvik..."
                     placeholderTextColor="#666"
                   />
-                  {activeSearchSlot === slot.id && (
-                    <View style={styles.searchDropdown}>
+                  <TouchableOpacity 
+                    style={styles.deleteSlotButton}
+                    onPress={() => removeSlot(slot.id)}
+                  >
+                    <ThemedText style={styles.deleteSlotButtonText}>×</ThemedText>
+                  </TouchableOpacity>
+                  {activeSearchSlot === slot.id && filteredExercises.length > 0 && (
+                    <ScrollView 
+                      style={styles.searchDropdown}
+                      nestedScrollEnabled={true}
+                      keyboardShouldPersistTaps="handled"
+                    >
                       {filteredExercises.slice(0, 5).map(ex => (
                         <TouchableOpacity 
                           key={ex.id} 
@@ -333,7 +456,7 @@ export default function NewWorkoutScreen() {
                           <ThemedText style={styles.searchOptionText}>{ex.name}</ThemedText>
                         </TouchableOpacity>
                       ))}
-                    </View>
+                    </ScrollView>
                   )}
                 </View>
               </View>
@@ -440,14 +563,6 @@ export default function NewWorkoutScreen() {
                   })
                 )}
               </View>
-
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.addScroll}>
-                {filteredExercises.map((ex: any) => (
-                  <TouchableOpacity key={ex.id} style={styles.addButton} onPress={() => addExerciseToSlot(slot.id, ex)}>
-                    <ThemedText style={styles.addButtonText}>{ex.name}</ThemedText>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
             </View>
             );
           })}
@@ -508,13 +623,33 @@ export default function NewWorkoutScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  menuButtonContainer: {
-    position: 'absolute',
-    top: 50,
-    left: 8,
-    zIndex: 10,
+  header: {
+    backgroundColor: '#D32F2F',
+    paddingTop: 44,
+    paddingBottom: 14,
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
-  content: { paddingHorizontal: 12, paddingTop: 60, paddingBottom: 24 },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerSpacer: {
+    width: 40,
+  },
+  content: { paddingHorizontal: 12, paddingTop: 24, paddingBottom: 24 },
   headerInline: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, marginTop: 6, marginBottom: 12 },
   headerButton: { backgroundColor: 'rgba(17,17,17,0.9)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#333', justifyContent: 'center', alignItems: 'center' },
   headerButtonText: { color: '#fff', fontSize: 14, fontWeight: '600', lineHeight: 18, textAlignVertical: 'center' as any },
@@ -525,6 +660,8 @@ const styles = StyleSheet.create({
   slotHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 10 },
   slotTitle: { color: '#fff', fontSize: 16, fontWeight: '700' },
   slotTitleInput: { color: '#fff', fontSize: 16, fontWeight: '700', backgroundColor: '#1a1a1a', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#666', minWidth: 120 },
+  deleteSlotButton: { backgroundColor: '#2a2a2a', width: 24, height: 24, borderRadius: 6, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#444' },
+  deleteSlotButtonText: { color: '#888', fontSize: 16, fontWeight: '700', lineHeight: 16 },
   searchInput: { flex: 1, backgroundColor: '#1a1a1a', color: '#fff', fontSize: 13, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#333' },
   searchDropdown: { position: 'absolute', top: 40, left: 0, right: 0, backgroundColor: '#2a2a2a', borderRadius: 8, borderWidth: 1, borderColor: '#444', zIndex: 1000, elevation: 10, maxHeight: 200, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.95, shadowRadius: 6 },
   searchOption: { paddingVertical: 10, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: '#444' },

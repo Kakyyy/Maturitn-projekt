@@ -40,11 +40,11 @@ export default function MuscleSelectScreen() {
   // Přepnutí mezi přední a zadní stranou těla
   const [side, setSide] = useState<"front" | "back">("front");
   // Stav otevření/zavření seznamu svalových partií
-  const [selectorOpen, setSelectorOpen] = useState(true);
+  const [selectorOpen, setSelectorOpen] = useState(false);
   // Animace pro postupné zobrazení obsahu a pro rozbalování seznamu
   const entranceAnim = useRef(new Animated.Value(0)).current;
   const openAnim = useRef(new Animated.Value(selectorOpen ? 1 : 0)).current;
-  const MAX_SELECTOR_HEIGHT = 240;
+  const MAX_SELECTOR_HEIGHT = 180;
 
   useEffect(() => {
     Animated.timing(entranceAnim, { toValue: 1, duration: 420, useNativeDriver: false }).start();
@@ -87,26 +87,26 @@ export default function MuscleSelectScreen() {
           </TouchableOpacity>
         </View>
       </View>
-      
-      <ScrollView contentContainerStyle={styles.content}>
 
-        <View
-          style={[styles.bodyPreview, styles.body]}
-        >
+      <View 
+        style={[styles.bodyPreview, styles.body]}
+        collapsable={false}
+        pointerEvents="box-none"
+      >
+        <View collapsable={false} pointerEvents="auto">
           <Body
             data={selected ? selected.data : []}
             gender="male"
             side={side}
-            scale={1.4}
+            scale={1.35}
             border="#D32F2F"
             colors={["#D32F2F", "#fff"]}
             onBodyPartPress={handleBodyPartPress}
           />
         </View>
-        
-
-        
-
+      </View>
+      
+      <View style={styles.bottomSection}>
         {/* Collapsible selector header + animated list */}
         <TouchableOpacity
           style={[styles.muscleButton, styles.muscleButtonFull, styles.selectorHeader]}
@@ -185,7 +185,7 @@ export default function MuscleSelectScreen() {
             </ThemedText>
           </TouchableOpacity>
         </Link>
-      </ScrollView>
+      </View>
     </ThemedView>
   );
 }
@@ -227,14 +227,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   content: { alignItems: "center", paddingHorizontal: 24, paddingVertical: 24 },
+  bottomSection: {
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    alignItems: 'center',
+  },
   bodyPreview: {
+    flex: 1,
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 24,
-    paddingVertical: 12,
-    height: 520,
-    marginTop: 0,
+    marginBottom: 0,
+    paddingVertical: 10,
     backgroundColor: 'transparent',
   },
   body: {
@@ -320,7 +324,7 @@ const styles = StyleSheet.create({
   },
   selectorScroll: {
     width: '100%',
-    maxHeight: 240,
+    maxHeight: 180,
     marginBottom: 12,
   },
   selectorContent: {

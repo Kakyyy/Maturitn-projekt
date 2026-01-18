@@ -1,0 +1,42 @@
+diff --git a/node_modules/react-native-body-highlighter/index.tsx b/node_modules/react-native-body-highlighter/index.tsx
+index 0000000..0000000 100644
+--- a/node_modules/react-native-body-highlighter/index.tsx
++++ b/node_modules/react-native-body-highlighter/index.tsx
+@@ -120,7 +120,7 @@ const Body = ({
+             return (
+               <Path
+                 key={path}
+-                onPress={() => onBodyPartPress?.(bodyPart)}
++                onPressIn={() => onBodyPartPress?.(bodyPart)}
+                 id={bodyPart.slug}
+                 fill={
+                   dataCommonPath ? getColorToFill(bodyPart) : bodyPart.color
+                 }
+                 d={path}
+               />
+             );
+           });
+@@ -137,7 +137,7 @@ const Body = ({
+             return (
+               <Path
+                 key={path}
+-                onPress={() => onBodyPartPress?.(bodyPart, "left")}
++                onPressIn={() => onBodyPartPress?.(bodyPart, "left")}
+                 id={bodyPart.slug}
+                 fill={isOnlyRight ? "#3f3f3f" : getColorToFill(bodyPart)}
+                 d={path}
+               />
+             );
+           });
+@@ -151,7 +151,7 @@ const Body = ({
+             return (
+               <Path
+                 key={path}
+-                onPress={() => onBodyPartPress?.(bodyPart, "right")}
++                onPressIn={() => onBodyPartPress?.(bodyPart, "right")}
+                 id={bodyPart.slug}
+                 fill={isOnlyLeft ? "#3f3f3f" : getColorToFill(bodyPart)}
+                 d={path}
+               />
+             );
+           });

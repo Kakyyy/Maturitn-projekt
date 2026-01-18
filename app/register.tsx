@@ -4,6 +4,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useRouter } from 'expo-router';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import {
     Alert,
@@ -15,13 +16,16 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
+
+  type Gender = 'male' | 'female';
 
 export default function RegisterScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [gender, setGender] = useState<Gender>('male');
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
@@ -43,6 +47,19 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
+      // Persist basic profile (including gender) so the app can render the right body model
+      await setDoc(
+        doc(db, 'users', userCredential.user.uid),
+        {
+          email: userCredential.user.email,
+          gender,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
       Alert.alert('Úspěch', 'Účet byl vytvořen!');
       console.log('User registered:', userCredential.user.email);
       router.replace('/(tabs)');
@@ -83,6 +100,47 @@ export default function RegisterScreen() {
             </ThemedText>
 
             <View style={styles.form}>
+              <View style={styles.inputContainer}>
+                <ThemedText style={styles.label}>Pohlaví</ThemedText>
+                <View style={styles.genderRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.genderButton,
+                      gender === 'male' && styles.genderButtonActive,
+                    ]}
+                    onPress={() => setGender('male')}
+                    disabled={loading}
+                  >
+                    <ThemedText
+                      style={[
+                        styles.genderButtonText,
+                        gender === 'male' && styles.genderButtonTextActive,
+                      ]}
+                    >
+                      Muž
+                    </ThemedText>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.genderButton,
+                      gender === 'female' && styles.genderButtonActive,
+                    ]}
+                    onPress={() => setGender('female')}
+                    disabled={loading}
+                  >
+                    <ThemedText
+                      style={[
+                        styles.genderButtonText,
+                        gender === 'female' && styles.genderButtonTextActive,
+                      ]}
+                    >
+                      Žena
+                    </ThemedText>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
               <View style={styles.inputContainer}>
                 <ThemedText style={styles.label}>Email</ThemedText>
                 <TextInput
@@ -190,6 +248,31 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     marginBottom: 20,
+  },
+  genderRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  genderButton: {
+    flex: 1,
+    backgroundColor: '#111',
+    borderWidth: 1,
+    borderColor: '#333',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  genderButtonActive: {
+    backgroundColor: '#D32F2F',
+    borderColor: '#D32F2F',
+  },
+  genderButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  genderButtonTextActive: {
+    color: '#fff',
   },
   label: {
     fontSize: 14,

@@ -14,6 +14,7 @@ import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from
 export default function ProfileScreen() {
   const router = useRouter();
   const { openDrawer } = useDrawer();
+  const [gender, setGender] = useState<'male' | 'female'>('male');
   const [name, setName] = useState('');
   const [surname, setSurname] = useState('');
   const [age, setAge] = useState('');
@@ -24,6 +25,7 @@ export default function ProfileScreen() {
 
   // Původní hodnoty pro detekci změn
   const [originalData, setOriginalData] = useState({
+    gender: 'male' as 'male' | 'female',
     name: '',
     surname: '',
     age: '',
@@ -47,6 +49,7 @@ export default function ProfileScreen() {
         if (docSnap.exists()) {
           const data = docSnap.data();
           const loadedData = {
+            gender: (data.gender === 'female' ? 'female' : 'male') as 'male' | 'female',
             name: data.name || '',
             surname: data.surname || '',
             age: data.age?.toString() || '',
@@ -55,6 +58,7 @@ export default function ProfileScreen() {
             goal: (data.goal || '') as 'strength' | 'mass' | 'endurance' | '',
           };
           
+          setGender(loadedData.gender);
           setName(loadedData.name);
           setSurname(loadedData.surname);
           setAge(loadedData.age);
@@ -75,6 +79,7 @@ export default function ProfileScreen() {
   // Kontrola, zda byly provedeny změny
   const hasChanges = () => {
     return (
+      gender !== originalData.gender ||
       name !== originalData.name ||
       surname !== originalData.surname ||
       age !== originalData.age ||
@@ -91,7 +96,10 @@ export default function ProfileScreen() {
     try {
       const user = auth.currentUser;
       if (user) {
-        await setDoc(doc(db, 'users', user.uid), {
+        await setDoc(
+          doc(db, 'users', user.uid),
+          {
+          gender,
           name,
           surname,
           age: age ? parseInt(age) : null,
@@ -100,10 +108,13 @@ export default function ProfileScreen() {
           goal,
           email: user.email,
           updatedAt: new Date().toISOString(),
-        });
+          },
+          { merge: true }
+        );
         
         // Aktualizovat původní data po uložení
         setOriginalData({
+          gender,
           name,
           surname,
           age,
@@ -140,6 +151,47 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.content}>
 
         <View style={styles.section}>
+          <View style={styles.inputGroup}>
+            <ThemedText style={styles.label}>Pohlaví</ThemedText>
+            <View style={styles.genderRow}>
+              <TouchableOpacity
+                style={[
+                  styles.genderButton,
+                  gender === 'male' && styles.genderButtonActive,
+                ]}
+                onPress={() => setGender('male')}
+                disabled={loading}
+              >
+                <ThemedText
+                  style={[
+                    styles.genderButtonText,
+                    gender === 'male' && styles.genderButtonTextActive,
+                  ]}
+                >
+                  Muž
+                </ThemedText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.genderButton,
+                  gender === 'female' && styles.genderButtonActive,
+                ]}
+                onPress={() => setGender('female')}
+                disabled={loading}
+              >
+                <ThemedText
+                  style={[
+                    styles.genderButtonText,
+                    gender === 'female' && styles.genderButtonTextActive,
+                  ]}
+                >
+                  Žena
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           <View style={styles.row}>
             <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
               <ThemedText style={styles.label}>Jméno</ThemedText>
@@ -332,6 +384,31 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     gap: 12,
+  },
+  genderRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  genderButton: {
+    flex: 1,
+    backgroundColor: '#1a1a1a',
+    borderWidth: 1,
+    borderColor: '#333',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  genderButtonActive: {
+    backgroundColor: '#D32F2F',
+    borderColor: '#D32F2F',
+  },
+  genderButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  genderButtonTextActive: {
+    color: '#fff',
   },
   goalsContainer: {
     flexDirection: 'row',

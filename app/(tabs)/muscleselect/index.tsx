@@ -4,6 +4,7 @@
 import MenuButton from '@/components/menu-button';
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { useAuth } from '@/contexts/AuthContext';
 import { useDrawer } from '@/contexts/DrawerContext';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Link, useRouter } from "expo-router";
@@ -35,6 +36,7 @@ const MUSCLE_OPTIONS = [
 export default function MuscleSelectScreen() {
   const router = useRouter();
   const { openDrawer } = useDrawer();
+  const { profile } = useAuth();
   // State pro aktuálně vybranou svalovou partii
   const [selected, setSelected] = useState<null | typeof MUSCLE_OPTIONS[0]>(null);
   // Přepnutí mezi přední a zadní stranou těla
@@ -71,6 +73,10 @@ export default function MuscleSelectScreen() {
     }
   };
 
+  const bodyGender = (profile?.gender === 'female' ? 'female' : 'male') as
+    | 'male'
+    | 'female';
+
   
   return (
     <ThemedView style={styles.container}>
@@ -96,7 +102,7 @@ export default function MuscleSelectScreen() {
         <View collapsable={false} pointerEvents="auto">
           <Body
             data={selected ? selected.data : []}
-            gender="male"
+            gender={bodyGender}
             side={side}
             scale={1.35}
             border="#D32F2F"

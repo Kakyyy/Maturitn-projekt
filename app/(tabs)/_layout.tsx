@@ -19,6 +19,7 @@ function LayoutContent() {
         <Stack.Screen name="explore" />
         <Stack.Screen name="muscleselect/index" />
         <Stack.Screen name="new-workout" />
+        <Stack.Screen name="history" />
         <Stack.Screen name="profile" />
       </Stack>
       

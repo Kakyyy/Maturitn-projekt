@@ -32,23 +32,22 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      Alert.alert('Úspěch', 'Přihlášení proběhlo úspěšně!');
       console.log('User logged in:', userCredential.user.email);
-      router.replace('/(tabs)');
+      router.replace('/');
     } catch (error: any) {
       console.error(error);
       let errorMessage = 'Nepodařilo se přihlásit';
-      
-      if (error.code === 'auth/user-not-found') {
-        errorMessage = 'Uživatel nenalezen';
-      } else if (error.code === 'auth/wrong-password') {
-        errorMessage = 'Špatné heslo';
-      } else if (error.code === 'auth/invalid-email') {
+
+      if (error.code === 'auth/invalid-email') {
         errorMessage = 'Neplatný email';
-      } else if (error.code === 'auth/invalid-credential') {
-        errorMessage = 'Neplatné přihlašovací údaje';
+      } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+        errorMessage = 'Nesprávný email nebo heslo';
+      } else if (error.code === 'auth/user-disabled') {
+        errorMessage = 'Tento účet je zablokovaný';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Příliš mnoho pokusů. Zkuste to později';
       }
-      
+
       Alert.alert('Chyba', errorMessage);
     } finally {
       setLoading(false);
@@ -66,12 +65,6 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.content}>
-            <View style={styles.logoContainer}>
-              <ThemedText style={styles.logoText}>
-                Power<ThemedText style={styles.logoTextAccent}>Gainz</ThemedText>
-              </ThemedText>
-            </View>
-            
             <ThemedText type="title" style={styles.title}>
               Přihlášení
             </ThemedText>
@@ -155,22 +148,6 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 24,
     paddingVertical: 48,
-  },
-  logoContainer: {
-    alignSelf: 'center',
-    marginBottom: 32,
-  },
-  logoText: {
-    fontSize: 48,
-    fontWeight: '900',
-    color: '#fff',
-    letterSpacing: -1,
-    lineHeight: 58,
-    paddingVertical: 4,
-  },
-  logoTextAccent: {
-    color: '#D32F2F',
-    fontWeight: '900',
   },
   title: {
     fontSize: 32,

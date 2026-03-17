@@ -1,3 +1,5 @@
+// UI: rozbalovací/skrývatelná sekce (collapsible).
+
 import { PropsWithChildren, useState } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 

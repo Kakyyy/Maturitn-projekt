@@ -1,3 +1,5 @@
+// Komponenta: mávající emoji animace.
+
 import Animated from 'react-native-reanimated';
 
 export function HelloWave() {
@@ -16,4 +18,5 @@ export function HelloWave() {
       Hello
     </Animated.Text>
   );
+// Komponenta: drobný dekorativní „wave“ prvek pro UI.
 }

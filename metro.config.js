@@ -1,3 +1,5 @@
+// Konfigurace Metro bundleru (Expo) včetně napojení vendored balíčku.
+
 const path = require('path');
 const { getDefaultConfig } = require('expo/metro-config');
 

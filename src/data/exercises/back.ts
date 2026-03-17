@@ -1,3 +1,5 @@
+// Data: export seznamu cviků pro partii „záda“.
+
 import BACK from '@/app/exercise/back';
 
 export { BACK };

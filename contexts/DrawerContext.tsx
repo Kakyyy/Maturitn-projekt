@@ -1,3 +1,5 @@
+// Kontext: stav a ovládání bočního menu (drawer) + možnost blokovat navigaci.
+
 import React, { createContext, useContext, useRef, useState } from 'react';
 
 interface DrawerContextType {

@@ -5,14 +5,39 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useDrawer } from '@/contexts/DrawerContext';
 import { auth, db } from '@/firebase';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useRouter } from 'expo-router';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, setDoc, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
+function toDayKey(value: any): string | null {
+  if (!value) return null;
+
+  let date: Date | null = null;
+  if (typeof value?.toMillis === 'function') {
+    date = new Date(value.toMillis());
+  } else if (typeof value?.seconds === 'number') {
+    date = new Date(value.seconds * 1000);
+  } else if (typeof value === 'string') {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) date = parsed;
+  }
+
+  if (!date) return null;
+  return date.toISOString().slice(0, 10);
+}
+
+function toTimestampMs(value: any): number {
+  if (!value) return 0;
+  if (typeof value?.toMillis === 'function') return value.toMillis();
+  if (typeof value?.seconds === 'number') return value.seconds * 1000;
+  if (typeof value === 'string') {
+    const parsed = new Date(value).getTime();
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+  return 0;
+}
+
 export default function ProfileScreen() {
-  const router = useRouter();
   const { openDrawer } = useDrawer();
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [name, setName] = useState('');
@@ -20,8 +45,9 @@ export default function ProfileScreen() {
   const [age, setAge] = useState('');
   const [weight, setWeight] = useState('');
   const [height, setHeight] = useState('');
-  const [goal, setGoal] = useState<'strength' | 'mass' | 'endurance' | ''>('');
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({ workouts: 0, exercises: 0, days: 0 });
 
   // Původní hodnoty pro detekci změn
   const [originalData, setOriginalData] = useState({
@@ -31,13 +57,66 @@ export default function ProfileScreen() {
     age: '',
     weight: '',
     height: '',
-    goal: '' as 'strength' | 'mass' | 'endurance' | '',
   });
 
   // Načtení dat z Firestore při otevření stránky
   useEffect(() => {
     loadProfile();
+    loadWorkoutStats();
   }, []);
+
+  const loadWorkoutStats = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const workoutsQuery = query(collection(db, 'workouts'), where('userId', '==', user.uid));
+      const querySnapshot = await getDocs(workoutsQuery);
+
+      const uniqueBySignature = new Map<string, any>();
+      const dayKeys = new Set<string>();
+
+      querySnapshot.forEach((workoutDoc) => {
+        const data = workoutDoc.data();
+        const exercises = (Array.isArray(data.exercises) ? data.exercises : []).map((ex: any) => ({
+          id: ex.exerciseId,
+          sets: ex.sets ?? 0,
+          reps: ex.reps ?? 0,
+          weight: ex.weight ?? 0,
+        }));
+
+        const signature = JSON.stringify({
+          name: data.name || '',
+          exercises,
+        });
+
+        const candidate = {
+          exercisesCount: exercises.length,
+          dayKey: toDayKey(data.createdAt) ?? toDayKey(data.updatedAt),
+          lastChangedAtMs: toTimestampMs(data.updatedAt) || toTimestampMs(data.createdAt),
+        };
+
+        const existing = uniqueBySignature.get(signature);
+        if (!existing || candidate.lastChangedAtMs > existing.lastChangedAtMs) {
+          uniqueBySignature.set(signature, candidate);
+        }
+      });
+
+      let exercisesCount = 0;
+      uniqueBySignature.forEach((item) => {
+        exercisesCount += item.exercisesCount;
+        if (item.dayKey) dayKeys.add(item.dayKey);
+      });
+
+      setStats({
+        workouts: uniqueBySignature.size,
+        exercises: exercisesCount,
+        days: dayKeys.size,
+      });
+    } catch (error) {
+      console.error('Chyba při načítání statistik:', error);
+    }
+  };
 
   const loadProfile = async () => {
     try {
@@ -55,7 +134,6 @@ export default function ProfileScreen() {
             age: data.age?.toString() || '',
             weight: data.weight?.toString() || '',
             height: data.height?.toString() || '',
-            goal: (data.goal || '') as 'strength' | 'mass' | 'endurance' | '',
           };
           
           setGender(loadedData.gender);
@@ -64,7 +142,6 @@ export default function ProfileScreen() {
           setAge(loadedData.age);
           setWeight(loadedData.weight);
           setHeight(loadedData.height);
-          setGoal(loadedData.goal);
           setOriginalData(loadedData);
         }
       }
@@ -84,18 +161,18 @@ export default function ProfileScreen() {
       surname !== originalData.surname ||
       age !== originalData.age ||
       weight !== originalData.weight ||
-      height !== originalData.height ||
-      goal !== originalData.goal
+      height !== originalData.height
     );
   };
 
-  // Uložení dat do Firestore
-  const handleSave = async () => {
-    if (!hasChanges()) return; // Neukládat, pokud nejsou změny
-    
+  // Auto-uložení dat do Firestore
+  const persistProfile = async () => {
+    if (!hasChanges() || loading) return;
+
     try {
       const user = auth.currentUser;
       if (user) {
+        setSaveState('saving');
         await setDoc(
           doc(db, 'users', user.uid),
           {
@@ -105,7 +182,6 @@ export default function ProfileScreen() {
           age: age ? parseInt(age) : null,
           weight: weight ? parseFloat(weight) : null,
           height: height ? parseFloat(height) : null,
-          goal,
           email: user.email,
           updatedAt: new Date().toISOString(),
           },
@@ -120,23 +196,33 @@ export default function ProfileScreen() {
           age,
           weight,
           height,
-          goal,
         });
-        
-        Alert.alert('Úspěch', 'Profil byl úspěšně uložen');
-        router.back();
+        setSaveState('saved');
       }
     } catch (error) {
       console.error('Chyba při ukládání profilu:', error);
-      Alert.alert('Chyba', 'Nepodařilo se uložit profil');
+      setSaveState('error');
     }
   };
 
-  const goals = [
-    { key: 'strength', label: 'Síla', icon: 'fitness-center' },
-    { key: 'mass', label: 'Svalová hmota', icon: 'trending-up' },
-    { key: 'endurance', label: 'Vytrvalost', icon: 'directions-run' },
-  ];
+  useEffect(() => {
+    if (loading || !hasChanges()) return;
+
+    const timer = setTimeout(() => {
+      persistProfile();
+    }, 700);
+
+    return () => clearTimeout(timer);
+  }, [gender, name, surname, age, weight, height, loading]);
+
+  const saveStatusText =
+    saveState === 'saving'
+      ? 'Ukládám...'
+      : saveState === 'saved'
+        ? 'Uloženo'
+        : saveState === 'error'
+          ? 'Chyba při ukládání'
+          : '';
 
   return (
     <ThemedView style={styles.container}>
@@ -255,60 +341,21 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>Tréninkový cíl</ThemedText>
-          <View style={styles.goalsContainer}>
-            {goals.map((g) => (
-              <TouchableOpacity
-                key={g.key}
-                style={[
-                  styles.goalCard,
-                  goal === g.key && styles.goalCardActive,
-                ]}
-                onPress={() => setGoal(g.key as any)}
-              >
-                <MaterialIcons
-                  name={g.icon as any}
-                  size={32}
-                  color={goal === g.key ? '#fff' : '#666'}
-                />
-                <ThemedText
-                  style={[
-                    styles.goalText,
-                    goal === g.key && styles.goalTextActive,
-                  ]}
-                >
-                  {g.label}
-                </ThemedText>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <TouchableOpacity 
-          style={[
-            styles.saveButton,
-            !hasChanges() && styles.saveButtonDisabled
-          ]} 
-          onPress={handleSave}
-          disabled={!hasChanges()}
-        >
-          <ThemedText style={styles.saveButtonText}>Uložit změny</ThemedText>
-        </TouchableOpacity>
+        {saveStatusText ? <ThemedText style={styles.saveStatus}>{saveStatusText}</ThemedText> : null}
 
         <View style={styles.statsSection}>
           <ThemedText style={styles.sectionTitle}>Statistiky</ThemedText>
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
-              <ThemedText style={styles.statNumber}>0</ThemedText>
+              <ThemedText style={styles.statNumber}>{stats.workouts}</ThemedText>
               <ThemedText style={styles.statLabel}>Tréninků</ThemedText>
             </View>
             <View style={styles.statCard}>
-              <ThemedText style={styles.statNumber}>0</ThemedText>
+              <ThemedText style={styles.statNumber}>{stats.exercises}</ThemedText>
               <ThemedText style={styles.statLabel}>Cviků</ThemedText>
             </View>
             <View style={styles.statCard}>
-              <ThemedText style={styles.statNumber}>0</ThemedText>
+              <ThemedText style={styles.statNumber}>{stats.days}</ThemedText>
               <ThemedText style={styles.statLabel}>Dnů</ThemedText>
             </View>
           </View>
@@ -410,48 +457,13 @@ const styles = StyleSheet.create({
   genderButtonTextActive: {
     color: '#fff',
   },
-  goalsContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  goalCard: {
-    flex: 1,
-    backgroundColor: '#1a1a1a',
-    borderWidth: 2,
-    borderColor: '#333',
-    borderRadius: 12,
-    padding: 20,
-    alignItems: 'center',
-    gap: 8,
-  },
-  goalCardActive: {
-    backgroundColor: '#D32F2F',
-    borderColor: '#D32F2F',
-  },
-  goalText: {
-    fontSize: 13,
+  saveStatus: {
+    color: '#999',
+    fontSize: 12,
     fontWeight: '600',
-    color: '#666',
-    textAlign: 'center',
-  },
-  goalTextActive: {
-    color: '#fff',
-  },
-  saveButton: {
-    backgroundColor: '#D32F2F',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  saveButtonDisabled: {
-    backgroundColor: '#666',
-    opacity: 0.5,
-  },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
+    textAlign: 'right',
+    marginTop: -8,
+    marginBottom: 24,
   },
   statsSection: {
     marginTop: 16,

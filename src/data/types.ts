@@ -1,3 +1,5 @@
+// Typy: společné TS typy pro databázi cviků.
+
 export type Difficulty = "easy" | "medium" | "hard";
 
 export type Exercise = {

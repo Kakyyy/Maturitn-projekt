@@ -6,11 +6,11 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAuth } from '@/contexts/AuthContext';
 import { useDrawer } from '@/contexts/DrawerContext';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Link, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { Animated, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Animated, StyleSheet, TouchableOpacity, View } from "react-native";
 import Body, { Slug } from "react-native-body-highlighter";
+
 
 // Definice svalových partií a jejich mapování na 3D model
 const MUSCLE_OPTIONS = [
@@ -41,28 +41,20 @@ export default function MuscleSelectScreen() {
   const [selected, setSelected] = useState<null | typeof MUSCLE_OPTIONS[0]>(null);
   // Přepnutí mezi přední a zadní stranou těla
   const [side, setSide] = useState<"front" | "back">("front");
-  // Stav otevření/zavření seznamu svalových partií
-  const [selectorOpen, setSelectorOpen] = useState(false);
-  // Animace pro postupné zobrazení obsahu a pro rozbalování seznamu
+  // Animace pro postupné zobrazení obsahu
   const entranceAnim = useRef(new Animated.Value(0)).current;
-  const openAnim = useRef(new Animated.Value(selectorOpen ? 1 : 0)).current;
-  const MAX_SELECTOR_HEIGHT = 180;
+  
+    
 
   useEffect(() => {
     Animated.timing(entranceAnim, { toValue: 1, duration: 420, useNativeDriver: false }).start();
   }, [entranceAnim]);
 
-  useEffect(() => {
-    Animated.timing(openAnim, { toValue: selectorOpen ? 1 : 0, duration: 220, useNativeDriver: false }).start();
-  }, [selectorOpen, openAnim]);
-
   const handleBodyPartPress = (bodyPart: any) => {
-    console.log('Body part pressed:', bodyPart);
     const found = MUSCLE_OPTIONS.find(option =>
       option.data.some(d => d.slug === bodyPart.slug)
     );
     if (found) {
-      console.log('Found muscle:', found.label);
       setSelected(found);
       // auto-rotate for back-facing muscles
       if (found.key === 'back' || found.key === 'hamstring' || found.key === 'gluteal' || found.key === 'trapezius') {
@@ -113,84 +105,30 @@ export default function MuscleSelectScreen() {
       </View>
       
       <View style={styles.bottomSection}>
-        {/* Collapsible selector header + animated list */}
-        <TouchableOpacity
-          style={[styles.muscleButton, styles.muscleButtonFull, styles.selectorHeader]}
-          onPress={() => setSelectorOpen(o => !o)}
-          accessibilityRole="button"
-        >
-          <ThemedText style={styles.muscleButtonText}>{selected ? selected.label : 'Vyberte partii'}</ThemedText>
-          <Animated.View style={{ transform: [{ rotate: openAnim.interpolate({ inputRange: [0,1], outputRange: ['0deg','180deg'] }) }] }}>
-            <MaterialIcons name="keyboard-arrow-down" size={22} color="#fff" />
-          </Animated.View>
-        </TouchableOpacity>
-
         <Animated.View
           style={{
             width: '100%',
-            overflow: 'hidden',
-            height: openAnim.interpolate({ inputRange: [0,1], outputRange: [0, MAX_SELECTOR_HEIGHT] }),
             opacity: entranceAnim,
             transform: [{ translateY: entranceAnim.interpolate({ inputRange: [0,1], outputRange: [8,0] }) }],
           }}
-          pointerEvents={selectorOpen ? 'auto' : 'none'}
         >
-          <ScrollView
-            style={styles.selectorScroll}
-            contentContainerStyle={styles.selectorContent}
-            nestedScrollEnabled={true}
-            showsVerticalScrollIndicator={true}
-          >
-            {MUSCLE_OPTIONS.map(option => (
-              <TouchableOpacity
-                key={option.key}
-                style={[
-                  styles.muscleButton,
-                  styles.muscleButtonFull,
-                  selected && selected.key === option.key && styles.muscleButtonActive,
-                ]}
-                onPress={() => {
-                  console.log('Button pressed:', option.label);
-                  setSelected(option);
-                  // auto-rotate when selecting back-facing muscles
-                  if (option.key === 'back' || option.key === 'hamstring' || option.key === 'gluteal' || option.key === 'trapezius') {
-                    setSide('back');
-                  } else {
-                    setSide('front');
-                  }
-                  // keep selector open so they can see the body update
-                }}
-              >
-                <ThemedText
-                  style={[
-                    styles.muscleButtonText,
-                    selected && selected.key === option.key && styles.muscleButtonTextActive,
-                  ]}
-                >
-                  {option.label}
-                </ThemedText>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <View style={[styles.muscleButton, styles.muscleButtonFull, styles.selectorHeader]}>
+            <ThemedText style={styles.muscleButtonText}>{selected ? selected.label : 'Vyberte partii na těle'}</ThemedText>
+          </View>
         </Animated.View>
 
-        <Link
-          href={
-            selected
-              ? { pathname: "/muscle/[type]", params: { type: selected.key } }
-              : "/muscleselect"
-          }
-          asChild
+        <TouchableOpacity
+          style={styles.openButton}
+          disabled={!selected}
+          onPress={() => {
+            if (!selected) return;
+            router.push({ pathname: "/muscle/[type]", params: { type: selected.key } });
+          }}
         >
-          <TouchableOpacity
-            style={styles.openButton}
-            disabled={!selected}
-          >
-            <ThemedText type="defaultSemiBold" style={styles.openButtonText}>
-              Zobraz cviky
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
+          <ThemedText type="defaultSemiBold" style={styles.openButtonText}>
+            Zobraz cviky
+          </ThemedText>
+        </TouchableOpacity>
       </View>
     </ThemedView>
   );
@@ -235,7 +173,8 @@ const styles = StyleSheet.create({
   content: { alignItems: "center", paddingHorizontal: 24, paddingVertical: 24 },
   bottomSection: {
     paddingHorizontal: 24,
-    paddingBottom: 24,
+    paddingBottom: 16,
+    marginTop: -95,
     alignItems: 'center',
   },
   bodyPreview: {
@@ -244,7 +183,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 0,
-    paddingVertical: 10,
+    paddingVertical: 0,
+    marginTop: -85,
     backgroundColor: 'transparent',
   },
   body: {
@@ -328,29 +268,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,0,0,0.6)',
     borderRadius: 8,
   },
-  selectorScroll: {
-    width: '100%',
-    maxHeight: 180,
-    marginBottom: 12,
-  },
-  selectorContent: {
-    alignItems: 'center',
-    paddingVertical: 6,
-  },
-  selectorContainer: {
-    width: '100%',
-    backgroundColor: '#0f0f0f',
-    borderRadius: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 6,
-    marginBottom: 18,
-    borderWidth: 1,
-    borderColor: '#222',
-  },
   muscleButtonFull: {
     width: '100%',
     paddingHorizontal: 20,
-    marginVertical: 6,
+    marginVertical: 0,
     alignItems: 'flex-start',
     zIndex: 300,
     elevation: 6,

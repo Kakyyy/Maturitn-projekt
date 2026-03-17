@@ -1,3 +1,5 @@
+// Komponenta: boční (drawer) menu s navigací mezi obrazovkami.
+
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useDrawer } from '@/contexts/DrawerContext';
@@ -15,7 +17,8 @@ const menuItems = [
   { path: '/(tabs)', label: 'Domů', icon: 'home' },
   { path: '/(tabs)/explore', label: 'Hledat cviky', icon: 'search' },
   { path: '/(tabs)/muscleselect', label: 'Výběr cviků', icon: 'fitness-center' },
-  { path: '/(tabs)/new-workout', label: 'Nový trénink', icon: 'add-circle' },
+  { path: '/(tabs)/new-workout', label: 'Trénink', icon: 'add-circle' },
+  { path: '/(tabs)/history', label: 'Historie tréninků', icon: 'history' },
   { path: '/(tabs)/profile', label: 'Profil', icon: 'person' },
 ];
 
@@ -40,22 +43,33 @@ export default function DrawerMenu({ visible, onClose }: DrawerMenuProps) {
         useNativeDriver: true,
       }).start();
     }
-  }, [visible]);
+  }, [visible, slideAnim]);
+
+  const isSameRoute = (currentPath: string, targetPath: string) => {
+    if (currentPath === targetPath) return true;
+    if (currentPath === `${targetPath}/index`) return true;
+    // Expo Router can sometimes omit/append trailing slash; normalize lightly
+    if (currentPath.endsWith('/') && currentPath.slice(0, -1) === targetPath) return true;
+    if (targetPath.endsWith('/') && targetPath.slice(0, -1) === currentPath) return true;
+    return false;
+  };
 
   const handleNavigate = async (path: string) => {
-    // Pokud již jsme na této stránce, jen zavřeme drawer
-    if (pathname === path || pathname.startsWith(path)) {
+    // If already on the target screen, just close the drawer.
+    if (isSameRoute(pathname, path)) {
       onClose();
       return;
     }
-    
+
     const allowed = await checkNavigationAllowed();
-    if (allowed) {
-      onClose();
-      setTimeout(() => {
-        router.push(path as any);
-      }, 200);
-    }
+    if (!allowed) return;
+
+    // Close the modal first (so it stops intercepting touches), then navigate on the next frame.
+    // This removes the "tap → nothing happens" feeling without adding an artificial delay.
+    onClose();
+    requestAnimationFrame(() => {
+      router.push(path as any);
+    });
   };
 
   if (!visible) return null;
@@ -67,12 +81,8 @@ export default function DrawerMenu({ visible, onClose }: DrawerMenuProps) {
       onRequestClose={onClose}
       animationType="none"
     >
-      <View style={styles.overlay}>
-        <TouchableOpacity
-          style={styles.backdrop}
-          activeOpacity={1}
-          onPress={onClose}
-        />
+      <View style={styles.overlay} pointerEvents="box-none">
+        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
         <Animated.View
           style={[
             styles.drawer,
@@ -91,7 +101,7 @@ export default function DrawerMenu({ visible, onClose }: DrawerMenuProps) {
 
             <View style={styles.menuItems}>
               {menuItems.map((item) => {
-                const isActive = pathname === item.path || pathname.startsWith(item.path);
+                const isActive = isSameRoute(pathname, item.path);
                 return (
                   <TouchableOpacity
                     key={item.path}
@@ -122,11 +132,16 @@ export default function DrawerMenu({ visible, onClose }: DrawerMenuProps) {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    flexDirection: 'row',
+    position: 'relative',
   },
   backdrop: {
-    flex: 1,
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 1,
   },
   drawer: {
     width: 280,
@@ -134,6 +149,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     top: 0,
+    zIndex: 2,
+    elevation: 2,
   },
   drawerContent: {
     flex: 1,

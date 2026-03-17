@@ -1,3 +1,5 @@
+// Komponenta: tlačítko (ikona) pro otevření bočního menu.
+
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';

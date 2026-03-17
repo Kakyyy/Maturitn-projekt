@@ -1,3 +1,5 @@
+// Firestore Rules: bezpečnostní pravidla pro čtení/zápis uživatelských dat a tréninků.
+
 rules_version = '2';
 
 service cloud.firestore {

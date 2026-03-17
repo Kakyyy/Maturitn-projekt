@@ -1,3 +1,5 @@
+// Hook (web): vrací aktuální barevné schéma (light/dark) při renderování na webu.
+
 import { useEffect, useState } from 'react';
 import { useColorScheme as useRNColorScheme } from 'react-native';
 

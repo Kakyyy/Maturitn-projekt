@@ -8,18 +8,30 @@ import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDrawer } from '@/contexts/DrawerContext';
 import { db } from '@/firebase';
-import { useRouter } from 'expo-router';
-import { addDoc, collection, deleteDoc, doc, getDocs, query, serverTimestamp, where } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDocs, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+
+function toTimestampMs(value: any): number | null {
+  if (!value) return null;
+  if (typeof value?.toMillis === 'function') return value.toMillis();
+  if (typeof value?.seconds === 'number') return value.seconds * 1000;
+  return null;
+}
+
+function formatDateOnly(timestampMs?: number | null): string {
+  if (!timestampMs) return '--.--.----';
+  return new Date(timestampMs).toLocaleDateString('cs-CZ');
+}
 
 // Obrazovka pro vytváření nového tréninku
 export default function NewWorkoutScreen() {
   const { openDrawer, setNavigationBlocker, checkNavigationAllowed } = useDrawer();
   const { user } = useAuth();
-  const router = useRouter();
   // State pro uchování tréninkových slotů (jednotlivé dny/tréninky)
   const [slots, setSlots] = useState<any[]>([]);
+  // State pro sbalený/rozbalený trénink
+  const [expandedSlotId, setExpandedSlotId] = useState<string | null>(null);
   // State pro vyhledávání cviků
   const [searchQuery, setSearchQuery] = useState<{ [key: string]: string }>({});
   // State pro editaci názvu slotu
@@ -41,46 +53,56 @@ export default function NewWorkoutScreen() {
     loadWorkouts();
   }, [user]);
 
-  // Sledování změn ve slotech pro detekci neuložených změn
-  useEffect(() => {
-    if (slots.length > 0) {
-      setHasUnsavedChanges(true);
-    } else {
-      setHasUnsavedChanges(false);
-    }
-  }, [slots]);
-
   // Funkce pro načtení tréninků z Firebase
   async function loadWorkouts() {
     if (!user) return;
     
     try {
-      console.log('Loading workouts from Firebase...');
       const workoutsQuery = query(
         collection(db, 'workouts'),
         where('userId', '==', user.uid)
       );
       
       const querySnapshot = await getDocs(workoutsQuery);
-      const loadedSlots: any[] = [];
+      const uniqueBySignature = new Map<string, any>();
       
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        loadedSlots.push({
-          id: doc.id,
+      querySnapshot.forEach((workoutDoc) => {
+        const data = workoutDoc.data();
+        const mappedExercises = data.exercises.map((ex: any) => ({
+          id: ex.exerciseId,
+          name: ex.exerciseName,
+          sets: ex.sets,
+          reps: ex.reps,
+          weight: ex.weight,
+        }));
+
+        const slot = {
+          id: workoutDoc.id,
           name: data.name,
-          exercises: data.exercises.map((ex: any) => ({
-            id: ex.exerciseId,
-            name: ex.exerciseName,
+          lastChangedAtMs: toTimestampMs(data.updatedAt) ?? toTimestampMs(data.createdAt) ?? Date.now(),
+          exercises: mappedExercises,
+        };
+
+        const signature = JSON.stringify({
+          name: slot.name,
+          exercises: mappedExercises.map((ex: any) => ({
+            id: ex.id,
             sets: ex.sets,
             reps: ex.reps,
             weight: ex.weight,
-          }))
+          })),
         });
+
+        const existing = uniqueBySignature.get(signature);
+        if (!existing || (slot.lastChangedAtMs ?? 0) > (existing.lastChangedAtMs ?? 0)) {
+          uniqueBySignature.set(signature, slot);
+        }
       });
+
+      const loadedSlots = Array.from(uniqueBySignature.values());
       
-      console.log('Loaded workouts:', loadedSlots.length);
       setSlots(loadedSlots);
+      setExpandedSlotId(null);
       setHasUnsavedChanges(false);
     } catch (error) {
       console.error('Chyba při načítání tréninků:', error);
@@ -131,12 +153,15 @@ export default function NewWorkoutScreen() {
   function addNewSlot() {
     const newId = `slot-${Date.now()}`;
     const newName = `Trénink ${slots.length + 1}`;
-    setSlots(s => [...s, { id: newId, name: newName, exercises: [] }]);
+    setSlots(s => [...s, { id: newId, name: newName, lastChangedAtMs: Date.now(), exercises: [] }]);
+    setHasUnsavedChanges(true);
+    setExpandedSlotId(null);
   }
 
   // Funkce pro přejmenování slotu
   function renameSlot(slotId: string, newName: string) {
-    setSlots(s => s.map(slot => slot.id === slotId ? { ...slot, name: newName } : slot));
+    setSlots(s => s.map(slot => slot.id === slotId ? { ...slot, name: newName, lastChangedAtMs: Date.now() } : slot));
+    setHasUnsavedChanges(true);
   }
 
   // Funkce pro odstranění tréninku
@@ -182,7 +207,14 @@ export default function NewWorkoutScreen() {
             }
             
             // Odebrat z lokálního stavu
-            setSlots(s => s.filter(slot => slot.id !== slotId));
+            setSlots(s => {
+              const next = s.filter(slot => slot.id !== slotId);
+              if (expandedSlotId === slotId) {
+                setExpandedSlotId(next[0]?.id ?? null);
+              }
+              return next;
+            });
+            setHasUnsavedChanges(true);
           },
           style: 'destructive'
         }
@@ -211,8 +243,9 @@ export default function NewWorkoutScreen() {
             setSlots(s => s.map(slot => {
               if (slot.id !== slotId) return slot;
               const next = slot.exercises.filter((_: any, idx: number) => idx !== exIndex);
-              return { ...slot, exercises: next };
+              return { ...slot, exercises: next, lastChangedAtMs: Date.now() };
             }));
+            setHasUnsavedChanges(true);
             setCustomDialog({ visible: false, title: '', message: '', buttons: [] });
           },
           style: 'destructive'
@@ -251,7 +284,8 @@ export default function NewWorkoutScreen() {
     }
     
     const item = { ...ex, sets: 3, reps: 8, weight: 0 };
-    setSlots(s => s.map(slot => slot.id === slotId ? { ...slot, exercises: [...slot.exercises, item] } : slot));
+    setSlots(s => s.map(slot => slot.id === slotId ? { ...slot, exercises: [...slot.exercises, item], lastChangedAtMs: Date.now() } : slot));
+    setHasUnsavedChanges(true);
   }
 
   // Funkce pro aktualizaci parametrů cviku (např. změna počtu sérií nebo opakování)
@@ -260,8 +294,9 @@ export default function NewWorkoutScreen() {
       if (slot.id !== slotId) return slot;
       const next = [...slot.exercises];
       next[exIndex] = { ...next[exIndex], ...patch };
-      return { ...slot, exercises: next };
+      return { ...slot, exercises: next, lastChangedAtMs: Date.now() };
     }));
+    setHasUnsavedChanges(true);
   }
 
   // Funkce pro uložení tréninku do Firebase
@@ -325,8 +360,9 @@ export default function NewWorkoutScreen() {
       console.log('User ID:', user?.uid);
       console.log('Number of slots:', slots.length);
       
-      // Uložíme každý trénink jako samostatný dokument
-      const promises = slots.map(async (slot) => {
+      // Existující tréninky aktualizujeme, nové (slot-*) vytvoříme jen jednou.
+      const savedSlots = await Promise.all(slots.map(async (slot) => {
+        const isLocalSlot = typeof slot.id === 'string' && slot.id.startsWith('slot-');
         const workoutData = {
           userId: user?.uid,
           name: slot.name,
@@ -337,16 +373,22 @@ export default function NewWorkoutScreen() {
             reps: ex.reps || 0,
             weight: ex.weight || 0,
           })),
-          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
         };
 
-        console.log('Saving workout:', workoutData);
-        const docRef = await addDoc(collection(db, 'workouts'), workoutData);
-        console.log('Workout saved with ID:', docRef.id);
-        return docRef;
-      });
+        if (isLocalSlot) {
+          const docRef = await addDoc(collection(db, 'workouts'), {
+            ...workoutData,
+            createdAt: serverTimestamp(),
+          });
+          return { ...slot, id: docRef.id };
+        }
 
-      await Promise.all(promises);
+        await setDoc(doc(db, 'workouts', slot.id), workoutData, { merge: true });
+        return slot;
+      }));
+
+      setSlots(savedSlots);
       console.log('All workouts saved successfully');
 
       setHasUnsavedChanges(false);
@@ -402,41 +444,64 @@ export default function NewWorkoutScreen() {
         <View style={styles.slots}>
           {slots.map(slot => {
             const query = searchQuery[slot.id] || '';
+            const isExpanded = expandedSlotId === slot.id;
             const filteredExercises = query
               ? allExercises.filter(ex => ex.name.toLowerCase().includes(query.toLowerCase()))
               : allExercises.slice(0, 20);
             
             return (
             <View key={slot.id} style={styles.slotCard}>
-              <View style={styles.slotHeader}>
-                {editingSlotId === slot.id ? (
-                  <TextInput
-                    style={styles.slotTitleInput}
-                    value={slot.name}
-                    onChangeText={(text) => renameSlot(slot.id, text)}
-                    onBlur={() => setEditingSlotId(null)}
-                    autoFocus
-                  />
-                ) : (
-                  <TouchableOpacity onPress={() => setEditingSlotId(slot.id)}>
-                    <ThemedText style={styles.slotTitle}>{slot.name}</ThemedText>
-                  </TouchableOpacity>
-                )}
-                <View style={{ flex: 1, position: 'relative', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <TextInput
-                    style={styles.searchInput}
-                    value={query}
-                    onChangeText={(text) => setSearchQuery(prev => ({ ...prev, [slot.id]: text }))}
-                    onFocus={() => setActiveSearchSlot(slot.id)}
-                    placeholder="Vyhledat cvik..."
-                    placeholderTextColor="#666"
-                  />
+              <View style={[styles.slotHeader, !isExpanded && styles.slotHeaderCollapsed]}>
+                <TouchableOpacity
+                  style={styles.slotHeaderMain}
+                  activeOpacity={0.85}
+                  onPress={() => setExpandedSlotId(isExpanded ? null : slot.id)}
+                >
+                  {editingSlotId === slot.id ? (
+                    <TextInput
+                      style={styles.slotTitleInput}
+                      value={slot.name}
+                      onChangeText={(text) => renameSlot(slot.id, text)}
+                      onBlur={() => setEditingSlotId(null)}
+                      autoFocus
+                    />
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.slotTitleTapArea}
+                      activeOpacity={0.75}
+                      onPress={() => setEditingSlotId(slot.id)}
+                    >
+                      <ThemedText style={styles.slotTitle}>{slot.name}</ThemedText>
+                    </TouchableOpacity>
+                  )}
+                  <View style={styles.slotHeaderRight}>
+                    <ThemedText style={styles.slotDate}>{formatDateOnly(slot.lastChangedAtMs)}</ThemedText>
+                    <View style={styles.expandToggleButton}>
+                      <ThemedText style={styles.expandIcon}>{isExpanded ? '▾' : '▸'}</ThemedText>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+                <View style={styles.slotHeaderActions}>
                   <TouchableOpacity 
                     style={styles.deleteSlotButton}
                     onPress={() => removeSlot(slot.id)}
                   >
                     <ThemedText style={styles.deleteSlotButtonText}>×</ThemedText>
                   </TouchableOpacity>
+                </View>
+              </View>
+
+              {isExpanded ? (
+                <>
+                  <View style={{ flex: 1, position: 'relative', flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <TextInput
+                      style={styles.searchInput}
+                      value={query}
+                      onChangeText={(text) => setSearchQuery(prev => ({ ...prev, [slot.id]: text }))}
+                      onFocus={() => setActiveSearchSlot(slot.id)}
+                      placeholder="Vyhledat cvik..."
+                      placeholderTextColor="#666"
+                    />
                   {activeSearchSlot === slot.id && filteredExercises.length > 0 && (
                     <ScrollView 
                       style={styles.searchDropdown}
@@ -458,111 +523,112 @@ export default function NewWorkoutScreen() {
                       ))}
                     </ScrollView>
                   )}
-                </View>
-              </View>
+                  </View>
 
-              <View style={styles.slotExercises}>
-                {slot.exercises.length === 0 ? (
-                  <ThemedText style={styles.noExercise}>Žádné cviky</ThemedText>
-                ) : (
-                  slot.exercises.map((e: any, i: number) => {
-                    return (
-                      <View key={i} style={styles.addedExerciseCard}>
-                        <View style={styles.exerciseRow}>
-                          <ThemedText style={styles.exerciseName}>{e.name}</ThemedText>
-                          
-                          <View style={styles.controlsCompact}>
-                            <View style={styles.weightColumn}>
-                              <ThemedText style={styles.pickerLabel}>Série</ThemedText>
-                              <TextInput
-                                style={styles.weightInput}
-                                value={e.sets === 0 || e.sets ? e.sets.toString() : ''}
-                                onChangeText={(text) => {
-                                  if (text === '') {
-                                    updateExerciseInSlot(slot.id, i, { sets: '' });
-                                  } else {
-                                    const num = parseInt(text);
-                                    if (!isNaN(num)) {
-                                      updateExerciseInSlot(slot.id, i, { sets: num });
-                                    }
-                                  }
-                                }}
-                                onBlur={() => {
-                                  if (e.sets === '' || e.sets === undefined || e.sets === null) {
-                                    updateExerciseInSlot(slot.id, i, { sets: 0 });
-                                  }
-                                }}
-                                keyboardType="numeric"
-                                placeholder="0"
-                                placeholderTextColor="#666"
-                              />
-                            </View>
+                  <View style={styles.slotExercises}>
+                    {slot.exercises.length === 0 ? (
+                      <ThemedText style={styles.noExercise}>Žádné cviky</ThemedText>
+                    ) : (
+                      slot.exercises.map((e: any, i: number) => {
+                        return (
+                          <View key={i} style={styles.addedExerciseCard}>
+                            <View style={styles.exerciseRow}>
+                              <ThemedText style={styles.exerciseName}>{e.name}</ThemedText>
+                              
+                              <View style={styles.controlsCompact}>
+                                <View style={styles.weightColumn}>
+                                  <ThemedText style={styles.pickerLabel}>Série</ThemedText>
+                                  <TextInput
+                                    style={styles.weightInput}
+                                    value={e.sets === 0 || e.sets ? e.sets.toString() : ''}
+                                    onChangeText={(text) => {
+                                      if (text === '') {
+                                        updateExerciseInSlot(slot.id, i, { sets: '' });
+                                      } else {
+                                        const num = parseInt(text);
+                                        if (!isNaN(num)) {
+                                          updateExerciseInSlot(slot.id, i, { sets: num });
+                                        }
+                                      }
+                                    }}
+                                    onBlur={() => {
+                                      if (e.sets === '' || e.sets === undefined || e.sets === null) {
+                                        updateExerciseInSlot(slot.id, i, { sets: 0 });
+                                      }
+                                    }}
+                                    keyboardType="numeric"
+                                    placeholder="0"
+                                    placeholderTextColor="#666"
+                                  />
+                                </View>
 
-                            <View style={styles.weightColumn}>
-                              <ThemedText style={styles.pickerLabel}>Opak.</ThemedText>
-                              <TextInput
-                                style={styles.weightInput}
-                                value={e.reps === 0 || e.reps ? e.reps.toString() : ''}
-                                onChangeText={(text) => {
-                                  if (text === '') {
-                                    updateExerciseInSlot(slot.id, i, { reps: '' });
-                                  } else {
-                                    const num = parseInt(text);
-                                    if (!isNaN(num)) {
-                                      updateExerciseInSlot(slot.id, i, { reps: num });
-                                    }
-                                  }
-                                }}
-                                onBlur={() => {
-                                  if (e.reps === '' || e.reps === undefined || e.reps === null) {
-                                    updateExerciseInSlot(slot.id, i, { reps: 0 });
-                                  }
-                                }}
-                                keyboardType="numeric"
-                                placeholder="0"
-                                placeholderTextColor="#666"
-                              />
-                            </View>
+                                <View style={styles.weightColumn}>
+                                  <ThemedText style={styles.pickerLabel}>Opak.</ThemedText>
+                                  <TextInput
+                                    style={styles.weightInput}
+                                    value={e.reps === 0 || e.reps ? e.reps.toString() : ''}
+                                    onChangeText={(text) => {
+                                      if (text === '') {
+                                        updateExerciseInSlot(slot.id, i, { reps: '' });
+                                      } else {
+                                        const num = parseInt(text);
+                                        if (!isNaN(num)) {
+                                          updateExerciseInSlot(slot.id, i, { reps: num });
+                                        }
+                                      }
+                                    }}
+                                    onBlur={() => {
+                                      if (e.reps === '' || e.reps === undefined || e.reps === null) {
+                                        updateExerciseInSlot(slot.id, i, { reps: 0 });
+                                      }
+                                    }}
+                                    keyboardType="numeric"
+                                    placeholder="0"
+                                    placeholderTextColor="#666"
+                                  />
+                                </View>
 
-                            <View style={styles.weightColumn}>
-                              <ThemedText style={styles.pickerLabel}>Kg</ThemedText>
-                              <TextInput
-                                style={styles.weightInput}
-                                value={e.weight === 0 || e.weight ? e.weight.toString() : ''}
-                                onChangeText={(text) => {
-                                  if (text === '') {
-                                    updateExerciseInSlot(slot.id, i, { weight: '' });
-                                  } else {
-                                    const num = parseFloat(text);
-                                    if (!isNaN(num)) {
-                                      updateExerciseInSlot(slot.id, i, { weight: num });
-                                    }
-                                  }
-                                }}
-                                onBlur={() => {
-                                  if (e.weight === '' || e.weight === undefined || e.weight === null) {
-                                    updateExerciseInSlot(slot.id, i, { weight: 0 });
-                                  }
-                                }}
-                                keyboardType="numeric"
-                                placeholder="0"
-                                placeholderTextColor="#666"
-                              />
+                                <View style={styles.weightColumn}>
+                                  <ThemedText style={styles.pickerLabel}>Kg</ThemedText>
+                                  <TextInput
+                                    style={styles.weightInput}
+                                    value={e.weight === 0 || e.weight ? e.weight.toString() : ''}
+                                    onChangeText={(text) => {
+                                      if (text === '') {
+                                        updateExerciseInSlot(slot.id, i, { weight: '' });
+                                      } else {
+                                        const num = parseFloat(text);
+                                        if (!isNaN(num)) {
+                                          updateExerciseInSlot(slot.id, i, { weight: num });
+                                        }
+                                      }
+                                    }}
+                                    onBlur={() => {
+                                      if (e.weight === '' || e.weight === undefined || e.weight === null) {
+                                        updateExerciseInSlot(slot.id, i, { weight: 0 });
+                                      }
+                                    }}
+                                    keyboardType="numeric"
+                                    placeholder="0"
+                                    placeholderTextColor="#666"
+                                  />
+                                </View>
+                              </View>
+                              
+                              <TouchableOpacity 
+                                style={styles.removeButton}
+                                onPress={() => removeExerciseFromSlot(slot.id, i)}
+                              >
+                                <ThemedText style={styles.removeButtonText}>×</ThemedText>
+                              </TouchableOpacity>
                             </View>
                           </View>
-                          
-                          <TouchableOpacity 
-                            style={styles.removeButton}
-                            onPress={() => removeExerciseFromSlot(slot.id, i)}
-                          >
-                            <ThemedText style={styles.removeButtonText}>×</ThemedText>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    );
-                  })
-                )}
-              </View>
+                        );
+                      })
+                    )}
+                  </View>
+                </>
+              ) : null}
             </View>
             );
           })}
@@ -656,9 +722,29 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, color: '#D32F2F', fontWeight: '800', textAlign: 'center' },
   titleBelowHeader: { marginTop: 8, marginBottom: 6 },
   slots: { marginTop: 18 },
-  slotCard: { backgroundColor: '#111', padding: 14, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#333' },
+  slotCard: {
+    backgroundColor: '#111',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
   slotHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 10 },
+  slotHeaderCollapsed: { marginBottom: 0 },
+  slotHeaderMain: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  slotHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  slotTitleTapArea: {
+    alignSelf: 'flex-start',
+    paddingVertical: 2,
+    paddingRight: 4,
+  },
+  slotHeaderActions: { flexDirection: 'row', alignItems: 'center' },
   slotTitle: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  slotDate: { color: '#aaa', fontSize: 10, fontWeight: '600' },
+  expandToggleButton: { paddingHorizontal: 6, paddingVertical: 2 },
+  expandIcon: { color: '#bbb', fontSize: 14, fontWeight: '800' },
   slotTitleInput: { color: '#fff', fontSize: 16, fontWeight: '700', backgroundColor: '#1a1a1a', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#666', minWidth: 120 },
   deleteSlotButton: { backgroundColor: '#2a2a2a', width: 24, height: 24, borderRadius: 6, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#444' },
   deleteSlotButtonText: { color: '#888', fontSize: 16, fontWeight: '700', lineHeight: 16 },

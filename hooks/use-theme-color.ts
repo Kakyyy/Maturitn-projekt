@@ -1,5 +1,7 @@
+// Hook: vrací barvu podle aktuálního tématu (light/dark) a klíče z palety.
+
 /**
- * Learn more about light and dark modes:
+ * Více k light/dark režimu:
  * https://docs.expo.dev/guides/color-schemes/
  */
 

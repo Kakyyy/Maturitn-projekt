@@ -1,15 +1,15 @@
+// Komponenta: Text s barvami a styly podle aktuálního tématu.
+
 import { StyleSheet, Text, type TextProps } from 'react-native';
 
 import { useThemeColor } from '@/hooks/use-theme-color';
 
-// Typy pro textovou komponentu s podporou různých stylů a barevných témat
 export type ThemedTextProps = TextProps & {
   lightColor?: string;
   darkColor?: string;
   type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link';
 };
 
-// Textová komponenta s automatickým použitím barevného tématu (světlé/tmavé)
 export function ThemedText({
   style,
   lightColor,
@@ -33,6 +33,7 @@ export function ThemedText({
       {...rest}
     />
   );
+// Komponenta: text stylovaný podle aktuálního tématu (světlé/tmavé).
 }
 
 const styles = StyleSheet.create({

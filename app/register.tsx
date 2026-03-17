@@ -7,14 +7,14 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { auth, db } from '../firebase';
 
@@ -62,7 +62,7 @@ export default function RegisterScreen() {
 
       Alert.alert('Úspěch', 'Účet byl vytvořen!');
       console.log('User registered:', userCredential.user.email);
-      router.replace('/(tabs)');
+      router.replace('/');
     } catch (error: any) {
       console.error(error);
       let errorMessage = 'Nepodařilo se vytvořit účet';

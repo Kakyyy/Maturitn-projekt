@@ -1,4 +1,5 @@
-// Import cviků ze všech svalových kategorií
+// Data: agregace všech cviků do jedné exportované kolekce.
+
 import ABS from '../abs';
 import BACK from '../back';
 import BICEPS from '../biceps';

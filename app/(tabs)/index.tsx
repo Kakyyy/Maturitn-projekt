@@ -1,16 +1,113 @@
-// Stránka: Home (Domovská stránka - tréninkový deník)
+// Stránka: Home (Domovská stránka)
 
-// Import komponent a navigace
+import ExerciseData from '@/app/exercise/data';
 import MenuButton from '@/components/menu-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useAuth } from '@/contexts/AuthContext';
 import { useDrawer } from '@/contexts/DrawerContext';
+import { db } from '@/firebase';
 import { Link } from 'expo-router';
-import { SafeAreaView, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { doc, setDoc } from 'firebase/firestore';
+import React, { useEffect, useMemo, useState } from 'react';
+import { SafeAreaView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
-// Domovská obrazovka aplikace s úvodním CTA tlačítkem a rychlými akcemi
 export default function HomeScreen() {
   const { openDrawer } = useDrawer();
+  const { user, profile } = useAuth();
+
+  const [openStreak, setOpenStreak] = useState<number>(0);
+
+  const exerciseCount = useMemo(() => Object.values(ExerciseData).flat().length, []);
+  const todayLabel = useMemo(() => {
+    const date = new Date();
+    try {
+      return new Intl.DateTimeFormat('cs-CZ', {
+        weekday: 'long',
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      }).format(date);
+    } catch {
+      try {
+        return date.toLocaleDateString('cs-CZ');
+      } catch {
+        return date.toDateString();
+      }
+    }
+  }, []);
+
+  function localDateKey(date: Date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  function addDays(date: Date, days: number) {
+    const d = new Date(date);
+    d.setDate(d.getDate() + days);
+    return d;
+  }
+
+  useEffect(() => {
+    if (!user) {
+      setOpenStreak(0);
+      return;
+    }
+
+    const current = typeof profile?.openStreak === 'number' ? profile.openStreak : 0;
+    setOpenStreak(current);
+  }, [user, profile?.openStreak]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function upsertOpenStreak() {
+      if (!user) return;
+
+      const todayKey = localDateKey(new Date());
+      const yesterdayKey = localDateKey(addDays(new Date(), -1));
+      const prevKey = typeof profile?.lastOpenDate === 'string' ? profile.lastOpenDate : null;
+      const prevStreak = typeof profile?.openStreak === 'number' ? profile.openStreak : 0;
+
+      // Already counted today → no update.
+      if (prevKey === todayKey) return;
+
+      const nextStreak = !prevKey ? 1 : prevKey === yesterdayKey ? Math.max(1, prevStreak + 1) : 1;
+
+      try {
+        await setDoc(
+          doc(db, 'users', user.uid),
+          {
+            lastOpenDate: todayKey,
+            openStreak: nextStreak,
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+
+        if (!cancelled) setOpenStreak(nextStreak);
+      } catch (e) {
+        console.error('Home: upsert open streak error', e);
+      }
+    }
+
+    upsertOpenStreak();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, profile?.lastOpenDate, profile?.openStreak]);
+
+  const firstName = (profile?.name || '').trim();
+  const greetingName = firstName ? firstName : 'sportovče';
+
+  const goalLabel = (() => {
+    if (!profile?.goal) return 'Začni tím, že si nastavíš cíl v profilu.';
+    if (profile.goal === 'strength') return 'Priorita: síla · těžší váhy, méně opakování.';
+    if (profile.goal === 'mass') return 'Priorita: svalová hmota · střední váhy, 8–12 opakování.';
+    if (profile.goal === 'endurance') return 'Priorita: vytrvalost · lehčí váhy, více opakování.';
+    return 'Uprav si trénink podle sebe v profilu.';
+  })();
 
   return (
     <ThemedView style={styles.container}>
@@ -18,87 +115,66 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <MenuButton onPress={openDrawer} />
-            <ThemedText style={styles.headerTitle}>PowerGainz</ThemedText>
+            <ThemedText style={styles.headerTitle}>Domů</ThemedText>
             <View style={styles.headerSpacer} />
           </View>
         </View>
-        
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <ThemedView style={styles.content}>
 
-          <Link href="/explore" asChild>
-            <TouchableOpacity style={[styles.startButton, styles.centeredButtonVisual]}>
-              <ThemedText type="defaultSemiBold" style={styles.buttonText}>
-                ZAČNEME!
-              </ThemedText>
-            </TouchableOpacity>
-          </Link>
+        <View style={styles.content}>
+          <View style={styles.hero}>
+            <ThemedText style={styles.heroTitle}>Ahoj, {greetingName}</ThemedText>
+            <ThemedText style={styles.heroSubtitle}>Co dneska chceš dělat?</ThemedText>
+            <ThemedText style={styles.heroDate}>{todayLabel}</ThemedText>
+          </View>
 
-          <ThemedView style={styles.quickActions}>
-            <ThemedText style={styles.sectionTitle}>Rychlé akce</ThemedText>
-            
-            <ThemedView style={styles.actionRow}>
-              <TouchableOpacity style={styles.smallButton}>
-                <ThemedText style={styles.smallButtonText}>Dnešní trénink</ThemedText>
+          <View style={styles.primaryActions}>
+            <Link href={'/(tabs)/muscleselect'} asChild>
+              <TouchableOpacity style={[styles.primaryCard, styles.primaryCardRed]} accessibilityRole="button">
+                <ThemedText style={styles.primaryCardTitle}>Vybrat partii</ThemedText>
+                <ThemedText style={styles.primaryCardSubtitle}>3D výběr → doporučené cviky</ThemedText>
               </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.smallButton}>
-                <ThemedText style={styles.smallButtonText}>Přidat cvik</ThemedText>
+            </Link>
+
+            <Link href={'/(tabs)/explore'} asChild>
+              <TouchableOpacity style={styles.primaryCard} accessibilityRole="button">
+                <ThemedText style={styles.primaryCardTitle}>Procházet cviky</ThemedText>
+                <ThemedText style={styles.primaryCardSubtitle}>Databáze cviků podle obtížnosti</ThemedText>
               </TouchableOpacity>
-            </ThemedView>
+            </Link>
+          </View>
 
-            <ThemedView style={styles.actionRow}>
-              <TouchableOpacity style={styles.smallButton}>
-                <ThemedText style={styles.smallButtonText}>Statistiky</ThemedText>
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.smallButton}>
-                <ThemedText style={styles.smallButtonText}>Nastavení</ThemedText>
-              </TouchableOpacity>
-            </ThemedView>
-          </ThemedView>
+          <View style={styles.statsRow}>
+            <View style={styles.statBoxPrimary}>
+              <ThemedText style={styles.statLabelSmall}>Dnešní série</ThemedText>
+              <ThemedText style={styles.statValue}>{user ? openStreak : '—'}</ThemedText>
+              <ThemedText style={styles.statLabel}>po sobě jdoucích dní v aplikaci</ThemedText>
+            </View>
+            <View style={styles.statBoxSecondary}>
+              <ThemedText style={styles.statLabelSmall}>Databáze</ThemedText>
+              <ThemedText style={styles.statValue}>{exerciseCount}</ThemedText>
+              <ThemedText style={styles.statLabel}>cviků připravených k použití</ThemedText>
+            </View>
+          </View>
 
-          <ThemedView style={styles.lastWorkout}>
-            <ThemedText style={styles.sectionTitle}>Poslední trénink</ThemedText>
-            <ThemedView style={styles.workoutCard}>
-              <ThemedText style={styles.workoutTitle}>Prsní svaly</ThemedText>
-              <ThemedText style={styles.workoutDetail}>Bench Press: 3x10 (80kg)</ThemedText>
-              <ThemedText style={styles.workoutDetail}>Kliky: 4x15</ThemedText>
-              <ThemedText style={styles.workoutDate}>Včera • 45 minut</ThemedText>
-            </ThemedView>
-          </ThemedView>
-
-          <ThemedView style={styles.features}>
-            <ThemedView style={styles.featureItem}>
-              <ThemedText style={styles.featureIcon}></ThemedText>
-              <ThemedText style={styles.featureText}>Sleduj pokroky </ThemedText>
-            </ThemedView>
-            
-            <ThemedView style={styles.featureItem}>
-              <ThemedText style={styles.featureIcon}></ThemedText>
-              <ThemedText style={styles.featureText}>50 cviků</ThemedText>
-            </ThemedView>
-            
-            <ThemedView style={styles.featureItem}>
-              <ThemedText style={styles.featureIcon}></ThemedText>
-              <ThemedText style={styles.featureText}>Statistiky</ThemedText>
-            </ThemedView>
-          </ThemedView>
-
-          {/* Removed the explicit muscle-selection CTA per design request */}
-
-        </ThemedView>
-        </ScrollView>
+          <View style={styles.goalCard}>
+            <View style={styles.goalHeaderRow}>
+              <ThemedText style={styles.goalTitle}>Tvůj aktuální cíl</ThemedText>
+              <Link href={'/(tabs)/profile'} asChild>
+                <TouchableOpacity>
+                  <ThemedText style={styles.goalEditLink}>upravit profil</ThemedText>
+                </TouchableOpacity>
+              </Link>
+            </View>
+            <ThemedText style={styles.goalDescription}>{goalLabel}</ThemedText>
+          </View>
+        </View>
       </SafeAreaView>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000000',
-  },
+  container: { flex: 1, backgroundColor: '#000000' },
   header: {
     backgroundColor: '#D32F2F',
     paddingTop: 44,
@@ -110,156 +186,61 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#fff',
-    flex: 1,
-    textAlign: 'center',
-  },
-  headerSpacer: {
-    width: 40,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  content: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 40,
-  },
-  startButton: {
-    backgroundColor: '#D32F2F',
-    paddingHorizontal: 40,
-    paddingVertical: 16,
-    borderRadius: 30,
-    shadowColor: '#D32F2F',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 12,
-    marginBottom: 24,
-    alignSelf: 'stretch',
-    width: '100%',
-    maxWidth: 420,
-  },
-  startButtonCentered: {
-    alignSelf: 'center',
-    width: '70%',
-    maxWidth: 420,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-  sectionTitle: {
-    fontSize: 20,
-    color: '#D32F2F',
-    fontWeight: 'bold',
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  quickActions: {
-    width: '100%',
-    marginBottom: 24,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  smallButton: {
-    backgroundColor: '#1a1a1a',
-    padding: 14,
-    borderRadius: 12,
-    width: '48%',
-    marginHorizontal: 0,
-    alignItems: 'center',
+  headerContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: '#fff', flex: 1, textAlign: 'center' },
+  headerSpacer: { width: 40 },
+  content: { flex: 1, alignItems: 'center', paddingHorizontal: 24, paddingTop: 18, paddingBottom: 18, gap: 14 },
+
+  hero: { width: '100%', marginBottom: 12 },
+  heroTitle: { fontSize: 26, lineHeight: 34, paddingBottom: 2, fontWeight: '800', color: '#fff', marginBottom: 4 },
+  heroSubtitle: { fontSize: 15, color: '#AAA', opacity: 0.95 },
+  heroDate: { fontSize: 13, color: '#888', marginTop: 6 },
+
+  primaryActions: { width: '100%', gap: 12, marginBottom: 12 },
+  primaryCard: {
+    backgroundColor: '#111',
     borderWidth: 1,
     borderColor: '#333',
-  },
-  smallButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  lastWorkout: {
-    width: '100%',
-    marginBottom: 30,
-  },
-  workoutCard: {
-    backgroundColor: '#1a1a1a',
-    padding: 20,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  workoutTitle: {
-    color: '#D32F2F',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  workoutDetail: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    marginBottom: 4,
-    opacity: 0.8,
-  },
-  workoutDate: {
-    color: '#666',
-    fontSize: 12,
-    marginTop: 8,
-  },
-  features: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    maxWidth: 400,
-  },
-  featureItem: {
-    alignItems: 'center',
-  },
-  featureIcon: {
-    fontSize: 32,
-    marginBottom: 12,
-  },
-  featureText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    opacity: 0.7,
-    textAlign: 'center',
-  },
-  centerButtonContainer: {
-    width: '100%',
-    alignItems: 'center',
-    marginTop: 12,
-    marginBottom: 18,
-  },
-  centeredButton: {
-    alignSelf: 'center',
-    width: '90%',
-    maxWidth: 420,
-  },
-  centeredButtonVisual: {
-    backgroundColor: '#D32F2F',
+    borderRadius: 14,
     paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: 32,
-    borderWidth: 1,
-    borderColor: '#B71C1C',
-    shadowColor: '#D32F2F',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 10,
+    paddingHorizontal: 16,
   },
+  primaryCardRed: { backgroundColor: '#D32F2F', borderColor: '#B71C1C' },
+  primaryCardTitle: { color: '#fff', fontSize: 18, fontWeight: '800', marginBottom: 2 },
+  primaryCardSubtitle: { color: '#fff', fontSize: 13, opacity: 0.85 },
+
+  statsRow: { width: '100%', flexDirection: 'row', gap: 12 },
+  statBoxPrimary: {
+    flex: 1,
+    backgroundColor: '#1b1b1b',
+    borderWidth: 1,
+    borderColor: '#D32F2F',
+    borderRadius: 14,
+    padding: 14,
+  },
+  statBoxSecondary: {
+    flex: 1,
+    backgroundColor: '#111',
+    borderWidth: 1,
+    borderColor: '#333',
+    borderRadius: 14,
+    padding: 14,
+  },
+  statValue: { color: '#fff', fontSize: 22, fontWeight: '800', marginBottom: 2 },
+  statLabel: { color: '#888', fontSize: 12 },
+  statLabelSmall: { color: '#bbb', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+
+  goalCard: {
+    width: '100%',
+    backgroundColor: '#111',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  goalHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  goalTitle: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  goalEditLink: { color: '#D32F2F', fontSize: 13, fontWeight: '600' },
+  goalDescription: { color: '#ccc', fontSize: 13, lineHeight: 18 },
 });

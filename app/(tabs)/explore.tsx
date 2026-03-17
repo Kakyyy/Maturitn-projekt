@@ -139,7 +139,10 @@ export default function ExploreScreen() {
               </TouchableOpacity>
             </Link>
 
-            <TouchableOpacity style={[styles.primaryActionButton, { marginLeft: 8 }]}> 
+            <TouchableOpacity
+              style={[styles.primaryActionButton, { marginLeft: 8 }]}
+              onPress={() => router.push('/(tabs)/history')}
+            > 
               <ThemedText style={styles.primaryActionButtonText}>Moje tréninky</ThemedText>
             </TouchableOpacity>
           </ThemedView>

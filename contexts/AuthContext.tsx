@@ -1,3 +1,5 @@
+// Kontext: správa přihlášení a načítání profilu uživatele z Firebase.
+
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import React, { createContext, useContext, useEffect, useState } from 'react';

@@ -1,3 +1,5 @@
+// UI (iOS): ikona přes SF Symbols (expo-symbols).
+
 import { SymbolView, SymbolViewProps, SymbolWeight } from 'expo-symbols';
 import { StyleProp, ViewStyle } from 'react-native';
 

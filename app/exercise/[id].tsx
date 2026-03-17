@@ -1,14 +1,12 @@
 // Stránka: Exercise Detail (Detail cviku)
-
-export const unstable_settings = { headerShown: false };
-
-// Import komponent a databáze cviků
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
-import { ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
-import EXERCISES from './data';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import exercisesDb from './data';
+
+export const unstable_settings = { headerShown: false };
 
 // Obrazovka s detailním popisem konkrétního cviku (instrukce, svaly, vybavení)
 export default function ExerciseScreen() {
@@ -17,7 +15,7 @@ export default function ExerciseScreen() {
   const router = useRouter();
 
   // Vyhledání cviku podle ID v databázi
-  const all = Object.values(EXERCISES).flat();
+  const all = Object.values(exercisesDb).flat();
   const exercise = all.find((e) => e.id === id) || all[0];
 
   const muscleLabel = exercise?.primaryMuscles?.join(', ') || 'Partie';
@@ -26,13 +24,13 @@ export default function ExerciseScreen() {
   return (
     <ThemedView style={styles.container}>
       <ThemedView style={styles.header}>
-        <ThemedView style={styles.headerContent}>
+        <View style={styles.headerContent}>
           <TouchableOpacity onPress={() => router.back()}>
             <MaterialIcons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
           <ThemedText style={styles.headerTitle} numberOfLines={1}>{exercise.name}</ThemedText>
-          <ThemedView style={styles.headerSpacer} />
-        </ThemedView>
+          <View style={styles.headerSpacer} />
+        </View>
       </ThemedView>
       
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -50,7 +48,7 @@ export default function ExerciseScreen() {
             {Array.isArray(instructions)
               ? instructions.map((instruction, index) => (
                   <ThemedText key={index} style={styles.instruction}>
-                    {index + 1}. {instruction}
+                    {index + 1}. {instruction} 
                   </ThemedText>
                 ))
               : instructions

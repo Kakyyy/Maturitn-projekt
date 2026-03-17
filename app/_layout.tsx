@@ -22,16 +22,19 @@ function RootLayoutNav() {
   useEffect(() => {
     if (loading) return;
 
-    const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
+    const inTabsGroup = segments[0] === '(tabs)';
+    const inAuthScreens = segments[0] === 'login' || segments[0] === 'register';
 
-    if (!user && !inAuthGroup) {
-      // Redirect to login if not authenticated
+    if (!user && inTabsGroup) {
       router.replace('/login');
-    } else if (user && inAuthGroup) {
-      // Redirect to tabs if authenticated and trying to access auth screens
-      router.replace('/(tabs)');
+      return;
     }
-  }, [user, loading, segments]);
+
+    // Přihlášený uživatel má zůstat na interních stránkách mimo tabs (např. muscle/[type]).
+    if (user && inAuthScreens) {
+      router.replace('/');
+    }
+  }, [loading, user, segments, router]);
 
   if (loading) {
     return (

@@ -1,11 +1,13 @@
+// Data: seznam cviků pro partii „břicho“.
+
 import { Exercise } from '@/src/data/types';
 
 const ABS: Exercise[] = [
-  { id: 'abs-1', name: 'Crunches', equipment: 'Vlastní váha', primaryMuscles: ['abs'], difficulty: 'easy', instructions: ['Zvedejte trup ke kolenům s pevnými břišními svaly.'] },
-  { id: 'abs-2', name: 'Plank', equipment: 'Vlastní váha', primaryMuscles: ['core'], difficulty: 'easy', instructions: ['Udržujte tělo v prkně po stanovený čas.'] },
-  { id: 'abs-3', name: 'Leg Raises', equipment: 'Vlastní váha', primaryMuscles: ['abs'], difficulty: 'medium', instructions: ['Zvedání natažených nohou v lehu.'] },
-  { id: 'abs-4', name: 'Russian Twists', equipment: 'Vlastní váha/medicinbal', primaryMuscles: ['obliques'], difficulty: 'easy', instructions: ['Rotace trupu vsedě s nohama nad zemí.'] },
-  { id: 'abs-5', name: 'Hanging Knee Raises', equipment: 'Hrazda', primaryMuscles: ['abs'], difficulty: 'medium', instructions: ['Zvedejte pokrčená kolena směrem k hrudi.'] },
+  { id: 'abs-1', name: 'Crunches', equipment: 'Vlastní váha', primaryMuscles: ['abs'], difficulty: 'easy', instructions: ['Lehněte si na záda, pokrčte kolena a chodidla položte na zem.', 'Ruce dejte na hrudník nebo lehce za hlavu (netlačte hlavou dopředu).', 'Zpevněte břicho a lehce podsadťe pánev.', 'S výdechem zvedněte lopatky pár centimetrů nad zem a dívejte se šikmo ke kolenům.', 'Chvilku zatněte břicho a pomalu se vraťte zpět bez „plácnutí“.', 'Držte plynulé tempo a neprohýbejte bedra.'] },
+  { id: 'abs-2', name: 'Plank', equipment: 'Vlastní váha', primaryMuscles: ['core'], difficulty: 'easy', instructions: ['Opřete se o předloktí, lokty dejte přímo pod ramena.', 'Nohy natáhněte dozadu a postavte se na špičky.', 'Zpevněte břicho a hýždě, tělo držte v jedné přímce.', 'Netlačte ramena k uším a držte krk dlouhý.', 'Dýchejte plynule a kontrolujte, aby se boky nepropadaly.', 'Ukončete sérii, jakmile ztratíte pevnou pozici.'] },
+  { id: 'abs-3', name: 'Leg Raises', equipment: 'Vlastní váha', primaryMuscles: ['abs'], difficulty: 'medium', instructions: ['Lehněte si na záda, ruce dejte podél těla nebo pod hýždě pro oporu.', 'Zpevněte střed těla a přitlačte bedra k podložce.', 'S výdechem zvedejte natažené nohy nahoru (nebo pokrčené, pokud je to těžké).', 'Zastavte, když cítíte, že se bedra začínají odlepovat od země.', 'Pomalu spouštějte dolů bez švihu a bez prohnutí v bedrech.', 'Opakujte plynule a kontrolovaně.'] },
+  { id: 'abs-4', name: 'Russian Twists', equipment: 'Vlastní váha/medicinbal', primaryMuscles: ['obliques'], difficulty: 'easy', instructions: ['Sedněte si na zem, mírně pokrčte kolena a zakloňte trup dozadu.', 'Zpevněte břicho a držte rovná záda (nehrbte se).', 'Zvedněte chodidla lehce nad zem nebo je nechte na zemi pro jednodušší variantu.', 'Otáčejte trupem doprava a doleva – pohyb vychází z trupu, ne jen z rukou.', 'Udržujte tempo pod kontrolou a nedělejte rychlé „trhání“.', 'Pokud používáte zátěž, držte ji blízko těla.'] },
+  { id: 'abs-5', name: 'Hanging Knee Raises', equipment: 'Hrazda', primaryMuscles: ['abs'], difficulty: 'medium', instructions: ['Chyťte se hrazdy a nechte se volně viset s pevnými úchopy.', 'Aktivujte ramena (lehce stáhněte lopatky dolů) a zpevněte střed těla.', 'S výdechem zvedejte pokrčená kolena směrem k hrudi.', 'Vyhněte se švihu – pohyb začínejte z břicha, ne z nohou.', 'Pomalu spouštějte zpět do výchozí pozice a držte kontrolu.', 'Pokud se houpete, zkraťte rozsah a zpomalte.'] },
 ];
 
 export default ABS;

@@ -1,11 +1,13 @@
+// Data: seznam cviků pro partii „hýždě“.
+
 import { Exercise } from '@/src/data/types';
 
 const GLUTEAL: Exercise[] = [
-  { id: 'gluteal-1', name: 'Hip Thrust', equipment: 'Lavice, činka', primaryMuscles: ['gluteal'], difficulty: 'medium', instructions: ['Tlačte boky vzhůru s činkou přes pánev.'] },
-  { id: 'gluteal-2', name: 'Glute Bridge', equipment: 'Vlastní váha', primaryMuscles: ['gluteal'], difficulty: 'easy', instructions: ['Zvedejte boky z lehu na zádech.'] },
-  { id: 'gluteal-3', name: 'Bulgarian Split Squat', equipment: 'Jednoručky', primaryMuscles: ['gluteal','quadriceps'], difficulty: 'hard', instructions: ['Jednonožný dřep s oporou zadní nohy.'] },
-  { id: 'gluteal-4', name: 'Single-leg Romanian Deadlift', equipment: 'Jednoručky', primaryMuscles: ['gluteal','hamstrings'], difficulty: 'medium', instructions: ['Kontrolovaný hinge na jedné noze.'] },
-  { id: 'gluteal-5', name: 'Cable Kickbacks', equipment: 'Kladka', primaryMuscles: ['gluteal'], difficulty: 'easy', instructions: ['Kopání zadní nohou proti odporu kladky.'] },
+  { id: 'gluteal-1', name: 'Hip Thrust', equipment: 'Lavice, činka', primaryMuscles: ['gluteal'], difficulty: 'medium', instructions: ['Opřete horní část zad o lavičku a činku položte přes pánev (použijte podložku).', 'Chodidla dejte na šířku boků a zpevněte břicho.', 'S výdechem tlačte boky vzhůru tak, aby trup byl v horní pozici zhruba vodorovně.', 'V horní pozici krátce zatněte hýždě a lehce podsadťe pánev.', 'Pomalu spouštějte dolů do výchozí pozice bez „padnutí“.', 'Kolenům držte směr ven (nebojte se je lehce tlačit od sebe).'] },
+  { id: 'gluteal-2', name: 'Glute Bridge', equipment: 'Vlastní váha', primaryMuscles: ['gluteal'], difficulty: 'easy', instructions: ['Lehněte si na záda, pokrčte kolena a chodidla položte na zem.', 'Chodidla dejte cca pod kolena a zpevněte břicho.', 'S výdechem zvedejte boky vzhůru, tlačte přes paty.', 'Nahoře zatněte hýždě a nedovolte prohnutí v bedrech.', 'Pomalu se vraťte dolů do výchozí pozice.', 'Pro těžší variantu podržte nahoře 1–2 sekundy.'] },
+  { id: 'gluteal-3', name: 'Bulgarian Split Squat', equipment: 'Jednoručky', primaryMuscles: ['gluteal','quadriceps'], difficulty: 'hard', instructions: ['Postavte se před lavičku a zadní nárt opřete o lavičku.', 'Přední nohu dejte tak daleko, aby koleno mohlo jít dolů bez ztráty rovnováhy.', 'Zpevněte střed těla a klesejte dolů kontrolovaně.', 'Přední koleno držte ve směru špičky a patu přední nohy neodlepujte.', 'Z dolní pozice se zvedněte tlakem přes celou plosku přední nohy.', 'Držte stabilní tempo a neodrážejte se.'] },
+  { id: 'gluteal-4', name: 'Single-leg Romanian Deadlift', equipment: 'Jednoručky', primaryMuscles: ['gluteal','hamstrings'], difficulty: 'medium', instructions: ['Postavte se na jednu nohu, druhou nohu lehce zvedněte dozadu.', 'Zpevněte břicho a držte pánev „rovně“ (neotáčejte ji do strany).', 'Jděte do předklonu (hinge) a posílejte boky dozadu.', 'Zátěž držte blízko nohy a záda držte v neutrálu.', 'Zastavte v pozici, kde cítíte protažení zadní strany stehna.', 'Vraťte se nahoru zatažením hýždě a hamstringu – bez švihu.'] },
+  { id: 'gluteal-5', name: 'Cable Kickbacks', equipment: 'Kladka', primaryMuscles: ['gluteal'], difficulty: 'easy', instructions: ['Připevněte popruh na kotník a postavte se čelem ke kladce.', 'Opřete se rukama a zpevněte střed těla.', 'Kopněte nohou dozadu a nahoru v kontrolovaném rozsahu.', 'V horní pozici krátce zatněte hýždě.', 'Pomalu vraťte nohu zpět bez prohnutí v bedrech.', 'Netočte trupem – pohyb jde z kyčle.'] },
 ];
 
 export default GLUTEAL;

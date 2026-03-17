@@ -38,6 +38,17 @@ yarn-error.*
 
 app-example
 
+# generated presentations
+PowerGainz-prezentace.pptx
+
+# Microsoft Office temporary/lock files
+~$*.pptx
+~$*.pptm
+~$*.docx
+~$*.docm
+~$*.xlsx
+~$*.xlsm
+
 # generated native folders
 /ios
 /android

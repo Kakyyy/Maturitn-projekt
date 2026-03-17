@@ -1,0 +1,10 @@
+{
+  "outputFile": "PowerGainz-prezentace.pptx",
+  "title": "Fitness aplikace",
+  "subtitle": "maturitní projekt • mobilní fitness aplikace",
+  "footer": "Autor: DOPLŇ JMÉNO  |  DOPLŇ ŠKOLU  |  DOPLŇ TŘÍDU  |  DOPLŇ DATUM",
+  "pptxAuthor": "DOPLŇ JMÉNO",
+  "images": {
+    "Motivace a cíl": "assets/images/SEM-DEJ-FOTKU-NA-SLIDE-2.png"
+  }
+}

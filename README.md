@@ -1,3 +1,13 @@
+# PowerGainz – Maturitní projekt
+
+Mobilní fitness aplikace pro plánování tréninku. Maturitní projekt.
+
+## Dokumentace projektu
+
+Písemná práce (30+ stran) je uložena ve složce [`docs/`](./docs/).
+
+---
+
 # Welcome to your Expo app
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).

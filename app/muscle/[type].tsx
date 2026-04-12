@@ -1,40 +1,53 @@
 // Stránka: Muscle Type (Detail svalové partie)
-
-export const unstable_settings = { headerShown: false };
-
 // Import databáze cviků, komponent a typů
-import EXERCISES from '@/app/exercise/data';
+import { EXERCISES } from '@/app/exercise/data';
+import HeaderLogo from '@/components/header-logo';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Exercise } from '@/src/data/types';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Link, useLocalSearchParams } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+
+export const unstable_settings = { headerShown: false };
 
 // Obrazovka zobrazující cviky pro konkrétní svalovou partii s možností řazení
 export default function MuscleScreen() {
   // Získání typu svalové partie z URL parametru
   const { type } = useLocalSearchParams();
+  const router = useRouter();
+  const muscleType = Array.isArray(type) ? type[0] : type;
   // State pro zobrazení/skrytí menu s možnostmi řazení
   const [sortOpen, setSortOpen] = useState(false);
   // Aktuální režim řazení (abecedně, podle obtížnosti atd.)
   const [sortMode, setSortMode] = useState<'az' | 'za' | 'diff-asc' | 'diff-desc'>('az');
-  
-  // Mapování klíčů svalových partií na jejich české názvy
-  const muscleNames: { [key: string]: string } = {
-    chest: 'Prsní svaly',
-    back: 'Zádové svaly',
-    deltoids: 'Ramena',
-    trapezius: 'Trapézy',
-    gluteal: 'Hýždě',
-    legs: 'Nohy',
-    arms: 'Ruce',
-    core: 'Břišní svaly'
-  };
 
+  const muscleLabel = useMemo(() => {
+    const labels: Record<string, string> = {
+      chest: 'Hrudnik',
+      back: 'Zada',
+      deltoids: 'Ramena',
+      biceps: 'Biceps',
+      triceps: 'Triceps',
+      forearm: 'Predlokti',
+      abs: 'Bricho',
+      quadriceps: 'Quadriceps',
+      hamstring: 'Hamstringy',
+      calves: 'Lytka',
+      trapezius: 'Trapezy',
+      gluteal: 'Hyzde',
+    };
+
+    if (!muscleType) return 'Partie';
+    return labels[muscleType] || (muscleType.charAt(0).toUpperCase() + muscleType.slice(1));
+  }, [muscleType]);
+  
   // Získání cviků pro aktuální svalovou partii
-  const currentExercises: Exercise[] = (EXERCISES[type as string] as Exercise[]) || [];
+  const currentExercises = useMemo<Exercise[]>(() => {
+    const bucket = EXERCISES[muscleType as string];
+    return Array.isArray(bucket) ? (bucket as Exercise[]) : [];
+  }, [muscleType]);
 
   // Převod obtížnosti na číselnou hodnotu pro řazení
   const difficultyValue = (ex: Exercise) => {
@@ -61,6 +74,20 @@ export default function MuscleScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <ThemedView style={styles.header}>
+        <View style={styles.headerContent}>
+          <TouchableOpacity
+            style={styles.headerBackButton}
+            onPress={() => router.push('/(tabs)/muscleselect')}
+            accessibilityLabel="Zpet na vyber tela"
+          >
+            <MaterialIcons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <ThemedText style={styles.headerTitle} numberOfLines={1}>{muscleLabel}</ThemedText>
+          <HeaderLogo />
+        </View>
+      </ThemedView>
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <ThemedView style={styles.content}>
           {sortOpen && (
@@ -151,6 +178,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     flex: 1,
     textAlign: 'center',
+  },
+  headerBackButton: {
+    width: 54,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
   },
   scrollContent: {
     flexGrow: 1,

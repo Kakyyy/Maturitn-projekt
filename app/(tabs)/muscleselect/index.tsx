@@ -1,6 +1,7 @@
 // Stránka: Muscle Select (Výběr svalové partie pomocí 3D modelu)
 
 // Import komponent a knihovny pro zobrazování 3D modelu těla
+import HeaderLogo from '@/components/header-logo';
 import MenuButton from '@/components/menu-button';
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -75,7 +76,7 @@ export default function MuscleSelectScreen() {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <MenuButton onPress={openDrawer} />
-          <ThemedText style={styles.headerTitle}>Výběr partie</ThemedText>
+          <ThemedText style={styles.headerTitle}>Výběr cviků</ThemedText>
           <TouchableOpacity
             style={styles.rotateButton}
             onPress={() => setSide(side === "front" ? "back" : "front")}
@@ -84,10 +85,11 @@ export default function MuscleSelectScreen() {
             <ThemedText style={styles.rotateButtonText}>Otočit</ThemedText>
           </TouchableOpacity>
         </View>
+        <HeaderLogo mode="watermark" />
       </View>
 
       <View 
-        style={[styles.bodyPreview, styles.body]}
+        style={StyleSheet.flatten([styles.bodyPreview, styles.body])}
         collapsable={false}
         pointerEvents="box-none"
       >
@@ -112,7 +114,7 @@ export default function MuscleSelectScreen() {
             transform: [{ translateY: entranceAnim.interpolate({ inputRange: [0,1], outputRange: [8,0] }) }],
           }}
         >
-          <View style={[styles.muscleButton, styles.muscleButtonFull, styles.selectorHeader]}>
+          <View style={StyleSheet.flatten([styles.muscleButton, styles.muscleButtonFull, styles.selectorHeader])}>
             <ThemedText style={styles.muscleButtonText}>{selected ? selected.label : 'Vyberte partii na těle'}</ThemedText>
           </View>
         </Animated.View>
@@ -172,9 +174,11 @@ const styles = StyleSheet.create({
   },
   content: { alignItems: "center", paddingHorizontal: 24, paddingVertical: 24 },
   bottomSection: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 72,
     paddingHorizontal: 24,
-    paddingBottom: 16,
-    marginTop: -95,
     alignItems: 'center',
   },
   bodyPreview: {
@@ -184,7 +188,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 0,
     paddingVertical: 0,
-    marginTop: -85,
+    marginTop: -185,
     backgroundColor: 'transparent',
   },
   body: {

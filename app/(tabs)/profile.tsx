@@ -1,12 +1,13 @@
 // Stránka: Profile (Uživatelský profil)
 
+import HeaderLogo from '@/components/header-logo';
 import MenuButton from '@/components/menu-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useDrawer } from '@/contexts/DrawerContext';
 import { auth, db } from '@/firebase';
 import { collection, doc, getDoc, getDocs, query, setDoc, where } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 function toDayKey(value: any): string | null {
@@ -45,6 +46,7 @@ export default function ProfileScreen() {
   const [age, setAge] = useState('');
   const [weight, setWeight] = useState('');
   const [height, setHeight] = useState('');
+  const [currentGoal, setCurrentGoal] = useState('');
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ workouts: 0, exercises: 0, days: 0 });
@@ -57,6 +59,7 @@ export default function ProfileScreen() {
     age: '',
     weight: '',
     height: '',
+    currentGoal: '',
   });
 
   // Načtení dat z Firestore při otevření stránky
@@ -69,6 +72,13 @@ export default function ProfileScreen() {
     try {
       const user = auth.currentUser;
       if (!user) return;
+
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      const openStreakFromDb =
+        userDocSnap.exists() && typeof userDocSnap.data().openStreak === 'number'
+          ? userDocSnap.data().openStreak
+          : null;
 
       const workoutsQuery = query(collection(db, 'workouts'), where('userId', '==', user.uid));
       const querySnapshot = await getDocs(workoutsQuery);
@@ -111,7 +121,7 @@ export default function ProfileScreen() {
       setStats({
         workouts: uniqueBySignature.size,
         exercises: exercisesCount,
-        days: dayKeys.size,
+        days: openStreakFromDb ?? dayKeys.size,
       });
     } catch (error) {
       console.error('Chyba při načítání statistik:', error);
@@ -134,6 +144,7 @@ export default function ProfileScreen() {
             age: data.age?.toString() || '',
             weight: data.weight?.toString() || '',
             height: data.height?.toString() || '',
+            currentGoal: data.currentGoal || '',
           };
           
           setGender(loadedData.gender);
@@ -142,6 +153,7 @@ export default function ProfileScreen() {
           setAge(loadedData.age);
           setWeight(loadedData.weight);
           setHeight(loadedData.height);
+          setCurrentGoal(loadedData.currentGoal);
           setOriginalData(loadedData);
         }
       }
@@ -154,19 +166,35 @@ export default function ProfileScreen() {
   };
 
   // Kontrola, zda byly provedeny změny
-  const hasChanges = () => {
+  const hasChanges = useCallback(() => {
     return (
       gender !== originalData.gender ||
       name !== originalData.name ||
       surname !== originalData.surname ||
       age !== originalData.age ||
       weight !== originalData.weight ||
-      height !== originalData.height
+      height !== originalData.height ||
+      currentGoal !== originalData.currentGoal
     );
-  };
+  }, [
+    gender,
+    originalData.gender,
+    name,
+    originalData.name,
+    surname,
+    originalData.surname,
+    age,
+    originalData.age,
+    weight,
+    originalData.weight,
+    height,
+    originalData.height,
+    currentGoal,
+    originalData.currentGoal,
+  ]);
 
   // Auto-uložení dat do Firestore
-  const persistProfile = async () => {
+  const persistProfile = useCallback(async () => {
     if (!hasChanges() || loading) return;
 
     try {
@@ -182,6 +210,7 @@ export default function ProfileScreen() {
           age: age ? parseInt(age) : null,
           weight: weight ? parseFloat(weight) : null,
           height: height ? parseFloat(height) : null,
+          currentGoal: currentGoal.trim(),
           email: user.email,
           updatedAt: new Date().toISOString(),
           },
@@ -196,6 +225,7 @@ export default function ProfileScreen() {
           age,
           weight,
           height,
+          currentGoal,
         });
         setSaveState('saved');
       }
@@ -203,7 +233,7 @@ export default function ProfileScreen() {
       console.error('Chyba při ukládání profilu:', error);
       setSaveState('error');
     }
-  };
+  }, [age, currentGoal, gender, hasChanges, height, loading, name, surname, weight]);
 
   useEffect(() => {
     if (loading || !hasChanges()) return;
@@ -213,7 +243,7 @@ export default function ProfileScreen() {
     }, 700);
 
     return () => clearTimeout(timer);
-  }, [gender, name, surname, age, weight, height, loading]);
+  }, [age, currentGoal, gender, hasChanges, height, loading, name, persistProfile, surname, weight]);
 
   const saveStatusText =
     saveState === 'saving'
@@ -230,7 +260,7 @@ export default function ProfileScreen() {
         <View style={styles.headerContent}>
           <MenuButton onPress={openDrawer} />
           <ThemedText style={styles.headerTitle}>Profil</ThemedText>
-          <View style={styles.headerSpacer} />
+          <HeaderLogo />
         </View>
       </View>
       
@@ -241,36 +271,36 @@ export default function ProfileScreen() {
             <ThemedText style={styles.label}>Pohlaví</ThemedText>
             <View style={styles.genderRow}>
               <TouchableOpacity
-                style={[
+                style={StyleSheet.flatten([
                   styles.genderButton,
                   gender === 'male' && styles.genderButtonActive,
-                ]}
+                ])}
                 onPress={() => setGender('male')}
                 disabled={loading}
               >
                 <ThemedText
-                  style={[
+                  style={StyleSheet.flatten([
                     styles.genderButtonText,
                     gender === 'male' && styles.genderButtonTextActive,
-                  ]}
+                  ])}
                 >
                   Muž
                 </ThemedText>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[
+                style={StyleSheet.flatten([
                   styles.genderButton,
                   gender === 'female' && styles.genderButtonActive,
-                ]}
+                ])}
                 onPress={() => setGender('female')}
                 disabled={loading}
               >
                 <ThemedText
-                  style={[
+                  style={StyleSheet.flatten([
                     styles.genderButtonText,
                     gender === 'female' && styles.genderButtonTextActive,
-                  ]}
+                  ])}
                 >
                   Žena
                 </ThemedText>
@@ -279,7 +309,7 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.row}>
-            <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+            <View style={StyleSheet.flatten([styles.inputGroup, { flex: 1, marginRight: 8 }])}>
               <ThemedText style={styles.label}>Jméno</ThemedText>
               <TextInput
                 style={styles.input}
@@ -290,7 +320,7 @@ export default function ProfileScreen() {
               />
             </View>
 
-            <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+            <View style={StyleSheet.flatten([styles.inputGroup, { flex: 1, marginLeft: 8 }])}>
               <ThemedText style={styles.label}>Příjmení</ThemedText>
               <TextInput
                 style={styles.input}
@@ -303,7 +333,7 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.row}>
-            <View style={[styles.inputGroup, { flex: 1 }]}>
+            <View style={StyleSheet.flatten([styles.inputGroup, { flex: 1 }])}>
               <ThemedText style={styles.label}>Věk</ThemedText>
               <TextInput
                 style={styles.input}
@@ -315,7 +345,7 @@ export default function ProfileScreen() {
               />
             </View>
 
-            <View style={[styles.inputGroup, { flex: 1 }]}>
+            <View style={StyleSheet.flatten([styles.inputGroup, { flex: 1 }])}>
               <ThemedText style={styles.label}>Výška (cm)</ThemedText>
               <TextInput
                 style={styles.input}
@@ -327,7 +357,7 @@ export default function ProfileScreen() {
               />
             </View>
 
-            <View style={[styles.inputGroup, { flex: 1 }]}>
+            <View style={StyleSheet.flatten([styles.inputGroup, { flex: 1 }])}>
               <ThemedText style={styles.label}>Váha (kg)</ThemedText>
               <TextInput
                 style={styles.input}
@@ -338,6 +368,19 @@ export default function ProfileScreen() {
                 keyboardType="numeric"
               />
             </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <ThemedText style={styles.label}>Tvůj aktuální cíl</ThemedText>
+            <TextInput
+              style={StyleSheet.flatten([styles.input, styles.goalInput])}
+              value={currentGoal}
+              onChangeText={setCurrentGoal}
+              placeholder="Např. Zhubnout 5 kg do léta"
+              placeholderTextColor="#666"
+              multiline
+              textAlignVertical="top"
+            />
           </View>
         </View>
 
@@ -427,6 +470,9 @@ const styles = StyleSheet.create({
     padding: 14,
     fontSize: 16,
     color: '#fff',
+  },
+  goalInput: {
+    minHeight: 90,
   },
   row: {
     flexDirection: 'row',

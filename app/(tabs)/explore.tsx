@@ -1,22 +1,25 @@
 // Stránka: Explore (Procházení cviků)
 
 // Import databáze cviků, komponent a ikon
-import EXERCISES from '@/app/exercise/data';
+import { EXERCISES } from '@/app/exercise/data';
+import HeaderLogo from '@/components/header-logo';
 import MenuButton from '@/components/menu-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useAuth } from '@/contexts/AuthContext';
 import { useDrawer } from '@/contexts/DrawerContext';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Link, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 // Obrazovka databáze cviků s filtrováním podle kategorií
 export default function ExploreScreen() {
-  // State pro aktuálně vybranou kategorii (výchozí: Nejoblíbenější)
-  const [selectedCategory, setSelectedCategory] = useState('Nejoblíbenější');
-  const router = useRouter();
+  // State pro aktuálně vybranou kategorii
+  const [selectedCategory, setSelectedCategory] = useState('Všechny');
+  const [visibleCount, setVisibleCount] = useState(5);
   const { openDrawer } = useDrawer();
+  const { profile } = useAuth();
 
   // Animace pro postupné zobrazení titulku a seznamu cviků
   const titleAnim = useRef(new Animated.Value(0)).current;
@@ -24,6 +27,15 @@ export default function ExploreScreen() {
 
   // Získání všech cviků ze všech kategorií
   const allExercises = useMemo(() => Object.values(EXERCISES).flat(), []);
+  const favoriteIds = useMemo(
+    () => (Array.isArray(profile?.favoriteExerciseIds) ? profile.favoriteExerciseIds : []),
+    [profile?.favoriteExerciseIds]
+  );
+  const favoriteSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
+  const allExercisesAZ = useMemo(
+    () => (allExercises || []).slice().sort((a: any, b: any) => (a.name || '').localeCompare(b.name || '', 'cs')),
+    [allExercises]
+  );
 
   // Spuštění animací při načtení komponenty (nejprve titulek, pak seznam)
   useEffect(() => {
@@ -33,44 +45,49 @@ export default function ExploreScreen() {
     ]).start();
   }, [titleAnim, listAnim]);
 
+  useEffect(() => {
+    setVisibleCount(5);
+  }, [selectedCategory]);
+
   // Převod obtížnosti cviku na číselnou hodnotu (lehký=1, střední=2, těžký=3)
   const difficultyValue = (ex: any) => {
     if (!ex || !ex.difficulty) return 1;
     return ex.difficulty === 'hard' ? 3 : ex.difficulty === 'medium' ? 2 : 1;
   };
 
-  // Filtrování a řazení cviků podle vybrané kategorie (max 5 cviků)
+  // Filtrování a řazení cviků podle vybrané kategorie
   const filteredExercises = useMemo(() => {
     const arr = (allExercises || []).slice();
     switch (selectedCategory) {
-      case 'Nejoblíbenější':
-        return arr.sort((a: any, b: any) => {
-          const ai = parseInt(String(a.id || ''), 10) || 0;
-          const bi = parseInt(String(b.id || ''), 10) || 0;
-          return ai - bi || (a.name || '').localeCompare(b.name || '');
-        }).slice(0, 5);
+      case 'Moje top': {
+        return arr
+          .filter((e: any) => favoriteSet.has(e.id))
+          .sort((a: any, b: any) => (a.name || '').localeCompare(b.name || ''));
+      }
+      case 'Všechny':
+        return allExercisesAZ;
       case 'Nejobtížnější':
-        return arr.sort((a: any, b: any) => difficultyValue(b) - difficultyValue(a)).slice(0, 5);
-      case 'Nejznámější':
-        const keywords = ['bench','dead','squat','press','curl','pull','snatch','clean'];
-        const popular = arr.filter((e: any) => keywords.some(k => (e.name||'').toLowerCase().includes(k))).slice(0,5);
-        if (popular.length >= 5) return popular;
-        // fill up
-        return Array.from(new Set([...popular, ...arr])).slice(0,5);
+        return arr.sort((a: any, b: any) => difficultyValue(b) - difficultyValue(a));
       case 'Nejlehčí':
-        return arr.sort((a: any, b: any) => difficultyValue(a) - difficultyValue(b)).slice(0,5);
+        return arr.sort((a: any, b: any) => difficultyValue(a) - difficultyValue(b));
       default:
-        return arr.slice(0,5);
+        return arr;
     }
-  }, [allExercises, selectedCategory]);
+  }, [allExercises, allExercisesAZ, favoriteSet, selectedCategory]);
+
+  const visibleExercises = useMemo(() => {
+    return filteredExercises.slice(0, visibleCount);
+  }, [filteredExercises, visibleCount]);
+
+  const canLoadMore = visibleCount < filteredExercises.length;
 
   function CategoryList() {
-    const cats = ['Nejoblíbenější', 'Nejobtížnější', 'Nejznámější', 'Nejlehčí'];
+    const cats = ['Všechny', 'Nejlehčí', 'Nejobtížnější', 'Moje top'];
     return (
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll} contentContainerStyle={{ paddingVertical: 6 }}>
         {cats.map(cat => (
-          <TouchableOpacity key={cat} style={[styles.categoryButton, selectedCategory === cat && styles.categoryButtonActive]} onPress={() => setSelectedCategory(cat)}>
-            <ThemedText style={[styles.categoryText, selectedCategory === cat && styles.categoryTextActive]}>{cat}</ThemedText>
+          <TouchableOpacity key={cat} style={StyleSheet.flatten([styles.categoryButton, selectedCategory === cat && styles.categoryButtonActive])} onPress={() => setSelectedCategory(cat)}>
+            <ThemedText style={StyleSheet.flatten([styles.categoryText, selectedCategory === cat && styles.categoryTextActive])}>{cat}</ThemedText>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -80,7 +97,10 @@ export default function ExploreScreen() {
   function ExercisePreviewList() {
       return (
         <Animated.View style={{ opacity: listAnim, transform: [{ translateY: listAnim.interpolate({ inputRange: [0,1], outputRange: [8,0] }) }] }}>
-          {filteredExercises.map((ex: any) => (
+          {selectedCategory === 'Moje top' && filteredExercises.length === 0 ? (
+            <ThemedText style={styles.emptyStateText}>Zatím nemáš žádné oblíbené cviky. Otevři detail cviku a dej srdíčko.</ThemedText>
+          ) : null}
+          {visibleExercises.map((ex: any) => (
             <Link key={ex.id} href={`/exercise/${ex.id}`} asChild>
               <TouchableOpacity style={styles.exerciseCard}>
                 <View style={styles.exerciseRow}>
@@ -88,6 +108,10 @@ export default function ExploreScreen() {
                     <ThemedText style={styles.exerciseName}>{ex.name}</ThemedText>
                     <ThemedText style={styles.exerciseMuscle}>{(ex.primaryMuscles||[]).join(' • ')}</ThemedText>
                   </View>
+
+                  {favoriteSet.has(ex.id) ? (
+                    <MaterialIcons name="favorite" size={16} color="#D32F2F" style={{ marginRight: 6 }} />
+                  ) : null}
 
                   <View style={styles.stars}>
                     { [0,1,2].map(i => {
@@ -108,6 +132,15 @@ export default function ExploreScreen() {
               </TouchableOpacity>
             </Link>
           ))}
+
+          {canLoadMore ? (
+            <TouchableOpacity
+              style={styles.loadMoreButton}
+              onPress={() => setVisibleCount((prev) => prev + 5)}
+            >
+              <ThemedText style={styles.loadMoreText}>Zobrazit další</ThemedText>
+            </TouchableOpacity>
+          ) : null}
         </Animated.View>
       );
   }
@@ -117,8 +150,8 @@ export default function ExploreScreen() {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <MenuButton onPress={openDrawer} />
-          <ThemedText style={styles.headerTitle}>Procházení</ThemedText>
-          <View style={styles.headerSpacer} />
+          <ThemedText style={styles.headerTitle}>Databáze cviků</ThemedText>
+          <HeaderLogo />
         </View>
       </View>
       
@@ -130,21 +163,6 @@ export default function ExploreScreen() {
             <CategoryList />
 
             <ExercisePreviewList />
-          </ThemedView>
-
-          <ThemedView style={styles.actionButtons}>
-            <Link href={'/(tabs)/new-workout'} asChild>
-              <TouchableOpacity style={[styles.primaryActionButton, { marginRight: 8 }]}> 
-                <ThemedText style={styles.primaryActionButtonText}>Nový trénink</ThemedText>
-              </TouchableOpacity>
-            </Link>
-
-            <TouchableOpacity
-              style={[styles.primaryActionButton, { marginLeft: 8 }]}
-              onPress={() => router.push('/(tabs)/history')}
-            > 
-              <ThemedText style={styles.primaryActionButtonText}>Moje tréninky</ThemedText>
-            </TouchableOpacity>
           </ThemedView>
 
         </ThemedView>
@@ -305,6 +323,26 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: 'left',
   },
+  emptyStateText: {
+    color: '#999',
+    fontSize: 13,
+    marginBottom: 12,
+  },
+  loadMoreButton: {
+    backgroundColor: '#111',
+    borderWidth: 1,
+    borderColor: '#333',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  loadMoreText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
   exerciseCard: {
     backgroundColor: '#1a1a1a',
     padding: 14,
@@ -337,42 +375,5 @@ const styles = StyleSheet.create({
   exerciseEquipment: {
     color: '#666',
     fontSize: 12,
-  },
-  actionButtons: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  actionButton: {
-    backgroundColor: '#1a1a1a',
-    padding: 15,
-    borderRadius: 12,
-    flex: 1,
-    marginHorizontal: 5,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  actionButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  primaryActionButton: {
-    backgroundColor: '#D32F2F',
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    flex: 1,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#B71C1C',
-  },
-  primaryActionButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-    textAlign: 'center',
   },
 });

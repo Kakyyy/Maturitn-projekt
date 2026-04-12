@@ -1,10 +1,11 @@
 // Stránka: Root Layout (Kořenový layout aplikace)
 
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import * as NavigationBar from 'expo-navigation-bar';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Platform, View } from 'react-native';
 import 'react-native-reanimated';
 
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
@@ -52,6 +53,7 @@ function RootLayoutNav() {
       <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       <Stack.Screen name="muscle/[type]" options={{ headerShown: false }} />
       <Stack.Screen name="exercise/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="workout/[id]" options={{ headerShown: false }} />
     </Stack>
   );
 }
@@ -59,11 +61,17 @@ function RootLayoutNav() {
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    NavigationBar.setVisibilityAsync('hidden');
+  }, []);
+
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>
         <RootLayoutNav />
-        <StatusBar style="auto" />
+        <StatusBar hidden={true} />
       </AuthProvider>
     </ThemeProvider>
   );

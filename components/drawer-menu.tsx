@@ -15,7 +15,7 @@ interface DrawerMenuProps {
 
 const menuItems = [
   { path: '/(tabs)', label: 'Domů', icon: 'home' },
-  { path: '/(tabs)/explore', label: 'Hledat cviky', icon: 'search' },
+  { path: '/(tabs)/explore', label: 'Databáze cviků', icon: 'search' },
   { path: '/(tabs)/muscleselect', label: 'Výběr cviků', icon: 'fitness-center' },
   { path: '/(tabs)/new-workout', label: 'Trénink', icon: 'add-circle' },
   { path: '/(tabs)/history', label: 'Historie tréninků', icon: 'history' },
@@ -27,6 +27,13 @@ export default function DrawerMenu({ visible, onClose }: DrawerMenuProps) {
   const pathname = usePathname();
   const { checkNavigationAllowed } = useDrawer();
   const slideAnim = React.useRef(new Animated.Value(-300)).current;
+
+  const normalizePath = (path: string) => {
+    return path
+      .replace(/\/\([^/]+\)/g, '')
+      .replace(/\/index$/, '')
+      .replace(/\/+$/, '') || '/';
+  };
 
   React.useEffect(() => {
     if (visible) {
@@ -46,12 +53,7 @@ export default function DrawerMenu({ visible, onClose }: DrawerMenuProps) {
   }, [visible, slideAnim]);
 
   const isSameRoute = (currentPath: string, targetPath: string) => {
-    if (currentPath === targetPath) return true;
-    if (currentPath === `${targetPath}/index`) return true;
-    // Expo Router can sometimes omit/append trailing slash; normalize lightly
-    if (currentPath.endsWith('/') && currentPath.slice(0, -1) === targetPath) return true;
-    if (targetPath.endsWith('/') && targetPath.slice(0, -1) === currentPath) return true;
-    return false;
+    return normalizePath(currentPath) === normalizePath(targetPath);
   };
 
   const handleNavigate = async (path: string) => {
@@ -64,12 +66,10 @@ export default function DrawerMenu({ visible, onClose }: DrawerMenuProps) {
     const allowed = await checkNavigationAllowed();
     if (!allowed) return;
 
-    // Close the modal first (so it stops intercepting touches), then navigate on the next frame.
-    // This removes the "tap → nothing happens" feeling without adding an artificial delay.
+    // Navigate immediately and close drawer in the same tap.
+    // Using replace keeps menu navigation snappy and avoids duplicate stack entries.
+    router.replace(path as any);
     onClose();
-    requestAnimationFrame(() => {
-      router.push(path as any);
-    });
   };
 
   if (!visible) return null;

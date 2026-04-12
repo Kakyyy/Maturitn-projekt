@@ -1,16 +1,18 @@
 // Stránka: New Workout (Nový trénink)
 
 // Import databáze cviků a komponent
-import EXERCISES from '@/app/exercise/data';
+import { EXERCISES } from '@/app/exercise/data';
+import HeaderLogo from '@/components/header-logo';
 import MenuButton from '@/components/menu-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDrawer } from '@/contexts/DrawerContext';
 import { db } from '@/firebase';
-import { addDoc, collection, deleteDoc, doc, getDocs, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { collection, deleteDoc, doc, getDocs, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, LayoutAnimation, Modal, PanResponder, ScrollView, StyleSheet, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 
 function toTimestampMs(value: any): number | null {
   if (!value) return null;
@@ -24,9 +26,17 @@ function formatDateOnly(timestampMs?: number | null): string {
   return new Date(timestampMs).toLocaleDateString('cs-CZ');
 }
 
+function normalizeWorkoutName(name: unknown): string {
+  return String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
 // Obrazovka pro vytváření nového tréninku
 export default function NewWorkoutScreen() {
-  const { openDrawer, setNavigationBlocker, checkNavigationAllowed } = useDrawer();
+  const router = useRouter();
+  const { openDrawer, setNavigationBlocker } = useDrawer();
   const { user } = useAuth();
   // State pro uchování tréninkových slotů (jednotlivé dny/tréninky)
   const [slots, setSlots] = useState<any[]>([]);
@@ -44,17 +54,36 @@ export default function NewWorkoutScreen() {
   const [isSaving, setIsSaving] = useState(false);
   // State pro sledování neuložených změn
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  // State pro drag-and-drop přesun tréninku
+  const [draggingSlotId, setDraggingSlotId] = useState<string | null>(null);
+  // ID aktuálně taženého tréninku (ref drží hodnotu i mezi re-rendery během gesta)
+  const draggingSlotIdRef = useRef<string | null>(null);
+  // Aktuální pořadí slotů dostupné synchronně uvnitř gesture callbacků
+  const slotsRef = useRef<any[]>([]);
+  // Naměřené výšky jednotlivých karet (pro přesný 50% threshold)
+  const slotHeightsRef = useRef<Record<string, number>>({});
+  // Index tažené karty v aktuálním pořadí
+  const activeDragIndexRef = useRef<number>(-1);
+  // O kolik "slotových vzdáleností" už byla karta během dragu vizuálně kompenzována
+  const dragVisualOffsetRef = useRef(0);
+  // Animovaná vertikální pozice tažené karty
+  const dragTranslateY = useRef(new Animated.Value(0)).current;
+
+  // Fallback, když karta ještě nebyla změřena onLayoutem
+  const DEFAULT_SLOT_HEIGHT = 78;
+  // Mezera mezi kartami, která se počítá do přeskoku na další pozici
+  const SLOT_VERTICAL_GAP = 12;
+
+  useEffect(() => {
+    slotsRef.current = slots;
+  }, [slots]);
 
   // Získání všech cviků ze všech svalových partií
   const allExercises = Object.values(EXERCISES).flat();
 
   // Načtení tréninků z Firebase při otevření stránky
-  useEffect(() => {
-    loadWorkouts();
-  }, [user]);
-
   // Funkce pro načtení tréninků z Firebase
-  async function loadWorkouts() {
+  const loadWorkouts = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -64,7 +93,7 @@ export default function NewWorkoutScreen() {
       );
       
       const querySnapshot = await getDocs(workoutsQuery);
-      const uniqueBySignature = new Map<string, any>();
+      const uniqueByName = new Map<string, any>();
       
       querySnapshot.forEach((workoutDoc) => {
         const data = workoutDoc.data();
@@ -79,27 +108,28 @@ export default function NewWorkoutScreen() {
         const slot = {
           id: workoutDoc.id,
           name: data.name,
-          lastChangedAtMs: toTimestampMs(data.updatedAt) ?? toTimestampMs(data.createdAt) ?? Date.now(),
+          order: typeof data.order === 'number' ? data.order : Number.MAX_SAFE_INTEGER,
+          lastChangedAtMs:
+            toTimestampMs(data.updatedAt) ??
+            (typeof data.updatedAtClientMs === 'number' ? data.updatedAtClientMs : null) ??
+            toTimestampMs(data.createdAt) ??
+            Date.now(),
           exercises: mappedExercises,
         };
 
-        const signature = JSON.stringify({
-          name: slot.name,
-          exercises: mappedExercises.map((ex: any) => ({
-            id: ex.id,
-            sets: ex.sets,
-            reps: ex.reps,
-            weight: ex.weight,
-          })),
-        });
-
-        const existing = uniqueBySignature.get(signature);
+        const key = normalizeWorkoutName(slot.name) || `__id__${slot.id}`;
+        const existing = uniqueByName.get(key);
         if (!existing || (slot.lastChangedAtMs ?? 0) > (existing.lastChangedAtMs ?? 0)) {
-          uniqueBySignature.set(signature, slot);
+          uniqueByName.set(key, slot);
         }
       });
 
-      const loadedSlots = Array.from(uniqueBySignature.values());
+      const loadedSlots = Array.from(uniqueByName.values()).sort((a, b) => {
+        if ((a.order ?? Number.MAX_SAFE_INTEGER) !== (b.order ?? Number.MAX_SAFE_INTEGER)) {
+          return (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER);
+        }
+        return (b.lastChangedAtMs ?? 0) - (a.lastChangedAtMs ?? 0);
+      });
       
       setSlots(loadedSlots);
       setExpandedSlotId(null);
@@ -107,7 +137,17 @@ export default function NewWorkoutScreen() {
     } catch (error) {
       console.error('Chyba při načítání tréninků:', error);
     }
-  }
+  }, [user]);
+
+  useEffect(() => {
+    loadWorkouts();
+  }, [loadWorkouts]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadWorkouts();
+    }, [loadWorkouts])
+  );
 
   // Registrace navigation blockeru pro kontrolu před odchodem ze stránky
   useEffect(() => {
@@ -299,13 +339,121 @@ export default function NewWorkoutScreen() {
     setHasUnsavedChanges(true);
   }
 
+  // Přesun tréninku mezi dvěma pozicemi v seznamu
+  const moveSlotByIndex = useCallback((fromIndex: number, toIndex: number) => {
+    // Plynulá výměna sousedních karet místo "skokového" přerenderu
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSlots((prev) => {
+      if (fromIndex < 0 || toIndex < 0 || fromIndex >= prev.length || toIndex >= prev.length) return prev;
+      if (fromIndex === toIndex) return prev;
+
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      slotsRef.current = next;
+      return next;
+    });
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const getSlotTravelDistance = useCallback((slotId?: string) => {
+    // Vzdálenost, kterou musí karta vizuálně "přeskočit" na další pozici
+    // = výška cílové karty + mezera mezi kartami.
+    if (!slotId) return DEFAULT_SLOT_HEIGHT + SLOT_VERTICAL_GAP;
+    const measuredHeight = slotHeightsRef.current[slotId] ?? DEFAULT_SLOT_HEIGHT;
+    return measuredHeight + SLOT_VERTICAL_GAP;
+  }, []);
+
+  const getSwapThreshold = useCallback((slotId?: string) => {
+    // Výměna nastane po překročení 50 % sousední karty.
+    return Math.max(28, getSlotTravelDistance(slotId) / 2);
+  }, [getSlotTravelDistance]);
+
+  const finishDragging = useCallback(() => {
+    // Reset interního drag stavu po puštění prstu
+    dragVisualOffsetRef.current = 0;
+    activeDragIndexRef.current = -1;
+    draggingSlotIdRef.current = null;
+    Animated.spring(dragTranslateY, {
+      toValue: 0,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 0,
+    }).start(() => {
+      setDraggingSlotId(null);
+    });
+  }, [dragTranslateY]);
+
+  const startDragging = useCallback((slotId: string) => {
+    if (slotsRef.current.length < 2) return;
+
+    const index = slotsRef.current.findIndex((slot) => slot.id === slotId);
+    if (index === -1) return;
+
+    // Při startu dragu zavřeme editační/interakční stavy,
+    // aby gesture nebylo rušeno dalšími elementy.
+    setActiveSearchSlot(null);
+    setEditingSlotId(null);
+
+    draggingSlotIdRef.current = slotId;
+    activeDragIndexRef.current = index;
+    dragVisualOffsetRef.current = 0;
+    dragTranslateY.setValue(0);
+    setDraggingSlotId(slotId);
+  }, [dragTranslateY]);
+
+  const slotPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return draggingSlotIdRef.current !== null && Math.abs(gestureState.dy) > 2;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (!draggingSlotIdRef.current) return;
+
+        const currentIndex = activeDragIndexRef.current;
+        if (currentIndex < 0) return;
+
+        let nextIndex = currentIndex;
+
+        while (nextIndex < slotsRef.current.length - 1) {
+          const belowSlotId = slotsRef.current[nextIndex + 1]?.id;
+          const belowTravel = getSlotTravelDistance(belowSlotId);
+          const downThreshold = getSwapThreshold(belowSlotId);
+          // Dolů swapneme až po překročení poloviny sousední karty.
+          if (gestureState.dy < dragVisualOffsetRef.current + downThreshold) break;
+
+          moveSlotByIndex(nextIndex, nextIndex + 1);
+          nextIndex += 1;
+          dragVisualOffsetRef.current += belowTravel;
+        }
+
+        while (nextIndex > 0) {
+          const aboveSlotId = slotsRef.current[nextIndex - 1]?.id;
+          const aboveTravel = getSlotTravelDistance(aboveSlotId);
+          const upThreshold = getSwapThreshold(aboveSlotId);
+          // Nahoru swapneme až po překročení poloviny sousední karty.
+          if (gestureState.dy > dragVisualOffsetRef.current - upThreshold) break;
+
+          moveSlotByIndex(nextIndex, nextIndex - 1);
+          nextIndex -= 1;
+          dragVisualOffsetRef.current -= aboveTravel;
+        }
+
+        activeDragIndexRef.current = nextIndex;
+
+        // Karta zůstává pod prstem i po více swapech.
+        // Bez této kompenzace by se s každým přeskokem vizuálně "utrhla".
+        dragTranslateY.setValue(gestureState.dy - dragVisualOffsetRef.current);
+      },
+      onPanResponderRelease: finishDragging,
+      onPanResponderTerminate: finishDragging,
+    })
+  ).current;
+
   // Funkce pro uložení tréninku do Firebase
   async function saveWorkout() {
-    console.log('saveWorkout called, user:', user?.uid);
-    console.log('slots:', slots);
-    
     if (!user) {
-      console.log('User not logged in');
       setCustomDialog({
         visible: true,
         title: 'Nepřihlášen',
@@ -324,7 +472,6 @@ export default function NewWorkoutScreen() {
     // Kontrola, zda jsou vyplněné všechny tréninky
     const emptyWorkouts = slots.filter(slot => slot.exercises.length === 0);
     if (emptyWorkouts.length > 0) {
-      console.log('Empty workouts detected:', emptyWorkouts.length);
       setCustomDialog({
         visible: true,
         title: 'Prázdné tréninky',
@@ -348,24 +495,44 @@ export default function NewWorkoutScreen() {
       return;
     }
 
-    console.log('All validations passed, calling performSave');
     await performSave();
   }
 
   async function performSave() {
-    console.log('performSave started');
     setIsSaving(true);
     try {
-      console.log('Saving workouts to Firebase...');
-      console.log('User ID:', user?.uid);
-      console.log('Number of slots:', slots.length);
-      
+      const existingWorkoutsSnapshot = await getDocs(
+        query(collection(db, 'workouts'), where('userId', '==', user?.uid))
+      );
+
+      const existingByName = new Map<string, { id: string; changedAtMs: number }>();
+      existingWorkoutsSnapshot.forEach((item) => {
+        const data = item.data();
+        const key = normalizeWorkoutName(data?.name);
+        if (!key) return;
+
+        const changedAtMs =
+          toTimestampMs(data?.updatedAt) ??
+          (typeof data?.updatedAtClientMs === 'number' ? data.updatedAtClientMs : null) ??
+          toTimestampMs(data?.createdAt) ??
+          0;
+
+        const prev = existingByName.get(key);
+        if (!prev || changedAtMs > prev.changedAtMs) {
+          existingByName.set(key, { id: item.id, changedAtMs });
+        }
+      });
+
       // Existující tréninky aktualizujeme, nové (slot-*) vytvoříme jen jednou.
-      const savedSlots = await Promise.all(slots.map(async (slot) => {
+      const savedSlots = await Promise.all(slots.map(async (slot, index) => {
+        const savedAtMs = Date.now();
         const isLocalSlot = typeof slot.id === 'string' && slot.id.startsWith('slot-');
+        const normalizedName = normalizeWorkoutName(slot.name);
         const workoutData = {
           userId: user?.uid,
           name: slot.name,
+          // Persist pořadí tréninků po custom přerovnání uživatelem
+          order: index,
           exercises: slot.exercises.map((ex: any) => ({
             exerciseId: ex.id,
             exerciseName: ex.name,
@@ -374,40 +541,30 @@ export default function NewWorkoutScreen() {
             weight: ex.weight || 0,
           })),
           updatedAt: serverTimestamp(),
+          updatedAtClientMs: savedAtMs,
         };
 
         if (isLocalSlot) {
-          const docRef = await addDoc(collection(db, 'workouts'), {
-            ...workoutData,
-            createdAt: serverTimestamp(),
-          });
-          return { ...slot, id: docRef.id };
+          const existing = normalizedName ? existingByName.get(normalizedName) : undefined;
+          const targetDocId = existing?.id ?? `${user?.uid || 'user'}-${slot.id}`;
+          const payload = existing
+            ? workoutData
+            : {
+                ...workoutData,
+                createdAt: serverTimestamp(),
+              };
+
+          await setDoc(doc(db, 'workouts', targetDocId), payload, { merge: true });
+          return { ...slot, id: targetDocId, lastChangedAtMs: savedAtMs };
         }
 
         await setDoc(doc(db, 'workouts', slot.id), workoutData, { merge: true });
-        return slot;
+        return { ...slot, lastChangedAtMs: savedAtMs };
       }));
 
       setSlots(savedSlots);
-      console.log('All workouts saved successfully');
 
       setHasUnsavedChanges(false);
-
-      setCustomDialog({
-        visible: true,
-        title: 'Úspěch!',
-        message: `${slots.length} ${slots.length === 1 ? 'trénink byl úspěšně uložen' : 'tréninky byly úspěšně uloženy'}.`,
-        buttons: [
-          {
-            text: 'OK',
-            onPress: () => {
-              setCustomDialog({ visible: false, title: '', message: '', buttons: [] });
-              // Tréninky zůstávají na obrazovce i po uložení
-            },
-            style: 'default'
-          }
-        ]
-      });
     } catch (error) {
       console.error('Chyba při ukládání tréninku:', error);
       console.error('Error details:', JSON.stringify(error, null, 2));
@@ -425,8 +582,27 @@ export default function NewWorkoutScreen() {
       });
     } finally {
       setIsSaving(false);
-      console.log('performSave finished');
     }
+  }
+
+  function openWorkoutDetail(slotId: string) {
+    if (!slotId || slotId.startsWith('slot-')) {
+      setCustomDialog({
+        visible: true,
+        title: 'Neuložený trénink',
+        message: 'Nejdřív klikněte na Uložit trénink, pak půjde otevřít detail.',
+        buttons: [
+          {
+            text: 'OK',
+            onPress: () => setCustomDialog({ visible: false, title: '', message: '', buttons: [] }),
+            style: 'cancel',
+          },
+        ],
+      });
+      return;
+    }
+
+    router.push({ pathname: '/workout/[id]', params: { id: slotId } });
   }
 
   return (
@@ -436,7 +612,7 @@ export default function NewWorkoutScreen() {
           <View style={styles.headerContent}>
             <MenuButton onPress={openDrawer} />
             <ThemedText style={styles.headerTitle}>Trénink</ThemedText>
-            <View style={styles.headerSpacer} />
+            <HeaderLogo />
           </View>
         </View>
         <ScrollView contentContainerStyle={styles.content}>
@@ -448,14 +624,33 @@ export default function NewWorkoutScreen() {
             const filteredExercises = query
               ? allExercises.filter(ex => ex.name.toLowerCase().includes(query.toLowerCase()))
               : allExercises.slice(0, 20);
+            const isDragging = draggingSlotId === slot.id;
             
             return (
-            <View key={slot.id} style={styles.slotCard}>
-              <View style={[styles.slotHeader, !isExpanded && styles.slotHeaderCollapsed]}>
+            <Animated.View
+              key={slot.id}
+              style={StyleSheet.flatten([
+                styles.slotCard,
+                isDragging && styles.slotCardDragging,
+                isDragging ? { transform: [{ translateY: dragTranslateY }] } : null,
+              ])}
+              onLayout={(event) => {
+                // Měření výšky karty pro přesný threshold 50 % sousedního tréninku
+                slotHeightsRef.current[slot.id] = event.nativeEvent.layout.height;
+              }}
+              {...slotPanResponder.panHandlers}
+            >
+              <View style={StyleSheet.flatten([styles.slotHeader, !isExpanded && styles.slotHeaderCollapsed])}>
                 <TouchableOpacity
                   style={styles.slotHeaderMain}
                   activeOpacity={0.85}
-                  onPress={() => setExpandedSlotId(isExpanded ? null : slot.id)}
+                  onPress={() => {
+                    if (draggingSlotIdRef.current) return;
+                    openWorkoutDetail(slot.id);
+                  }}
+                  // Podržení aktivuje drag režim, bez popupu.
+                  onLongPress={() => startDragging(slot.id)}
+                  delayLongPress={220}
                 >
                   {editingSlotId === slot.id ? (
                     <TextInput
@@ -466,25 +661,19 @@ export default function NewWorkoutScreen() {
                       autoFocus
                     />
                   ) : (
-                    <TouchableOpacity
-                      style={styles.slotTitleTapArea}
-                      activeOpacity={0.75}
-                      onPress={() => setEditingSlotId(slot.id)}
-                    >
+                    <View style={styles.slotTitleTapArea}>
                       <ThemedText style={styles.slotTitle}>{slot.name}</ThemedText>
-                    </TouchableOpacity>
+                    </View>
                   )}
                   <View style={styles.slotHeaderRight}>
                     <ThemedText style={styles.slotDate}>{formatDateOnly(slot.lastChangedAtMs)}</ThemedText>
-                    <View style={styles.expandToggleButton}>
-                      <ThemedText style={styles.expandIcon}>{isExpanded ? '▾' : '▸'}</ThemedText>
-                    </View>
                   </View>
                 </TouchableOpacity>
                 <View style={styles.slotHeaderActions}>
                   <TouchableOpacity 
                     style={styles.deleteSlotButton}
                     onPress={() => removeSlot(slot.id)}
+                    disabled={Boolean(draggingSlotId)}
                   >
                     <ThemedText style={styles.deleteSlotButtonText}>×</ThemedText>
                   </TouchableOpacity>
@@ -629,7 +818,7 @@ export default function NewWorkoutScreen() {
                   </View>
                 </>
               ) : null}
-            </View>
+            </Animated.View>
             );
           })}
           
@@ -638,11 +827,11 @@ export default function NewWorkoutScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.saveWorkoutButton, (isSaving || slots.length === 0) && styles.saveWorkoutButtonDisabled]} 
+            style={StyleSheet.flatten([styles.saveWorkoutButton, (isSaving || slots.length === 0) && styles.saveWorkoutButtonDisabled])} 
             onPress={saveWorkout}
             disabled={isSaving || slots.length === 0}
           >
-            <ThemedText style={[styles.saveWorkoutButtonText, slots.length === 0 && styles.saveWorkoutButtonTextDisabled]}>
+            <ThemedText style={StyleSheet.flatten([styles.saveWorkoutButtonText, slots.length === 0 && styles.saveWorkoutButtonTextDisabled])}>
               {isSaving ? 'Ukládám...' : 'Uložit trénink'}
             </ThemedText>
           </TouchableOpacity>
@@ -664,16 +853,16 @@ export default function NewWorkoutScreen() {
               {customDialog.buttons.map((btn: any, idx: number) => (
                 <TouchableOpacity
                   key={idx}
-                  style={[
+                  style={StyleSheet.flatten([
                     styles.modalButton,
                     btn.style === 'destructive' && styles.modalButtonDestructive
-                  ]}
+                  ])}
                   onPress={btn.onPress}
                 >
-                  <ThemedText style={[
+                  <ThemedText style={StyleSheet.flatten([
                     styles.modalButtonText,
                     btn.style === 'destructive' && styles.modalButtonTextDestructive
-                  ]}>
+                  ])}>
                     {btn.text}
                   </ThemedText>
                 </TouchableOpacity>
@@ -731,6 +920,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#333',
   },
+  slotCardDragging: {
+    borderColor: '#D32F2F',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 10,
+    zIndex: 200,
+  },
   slotHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 10 },
   slotHeaderCollapsed: { marginBottom: 0 },
   slotHeaderMain: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
@@ -740,12 +938,21 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     paddingRight: 4,
   },
-  slotHeaderActions: { flexDirection: 'row', alignItems: 'center' },
+  slotHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   slotTitle: { color: '#fff', fontSize: 16, fontWeight: '700' },
   slotDate: { color: '#aaa', fontSize: 10, fontWeight: '600' },
   expandToggleButton: { paddingHorizontal: 6, paddingVertical: 2 },
   expandIcon: { color: '#bbb', fontSize: 14, fontWeight: '800' },
   slotTitleInput: { color: '#fff', fontSize: 16, fontWeight: '700', backgroundColor: '#1a1a1a', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#666', minWidth: 120 },
+  detailSlotButton: {
+    backgroundColor: '#1a1a1a',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  detailSlotButtonText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   deleteSlotButton: { backgroundColor: '#2a2a2a', width: 24, height: 24, borderRadius: 6, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#444' },
   deleteSlotButtonText: { color: '#888', fontSize: 16, fontWeight: '700', lineHeight: 16 },
   searchInput: { flex: 1, backgroundColor: '#1a1a1a', color: '#fff', fontSize: 13, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#333' },

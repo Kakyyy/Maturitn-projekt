@@ -101,7 +101,7 @@ export default function LoginScreen() {
               </View>
 
               <TouchableOpacity
-                style={[styles.loginButton, loading && styles.buttonDisabled]}
+                style={StyleSheet.flatten([styles.loginButton, loading && styles.buttonDisabled])}
                 onPress={handleLogin}
                 disabled={loading}
               >

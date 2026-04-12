@@ -1,8 +1,13 @@
 // Stránka: Exercise Detail (Detail cviku)
+import HeaderLogo from '@/components/header-logo';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useAuth } from '@/contexts/AuthContext';
+import { db } from '@/firebase';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
+import { doc, setDoc } from 'firebase/firestore';
+import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import exercisesDb from './data';
 
@@ -13,13 +18,44 @@ export default function ExerciseScreen() {
   // Získání ID cviku z URL parametru
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { user, profile } = useAuth();
+  const [savingFavorite, setSavingFavorite] = useState(false);
 
   // Vyhledání cviku podle ID v databázi
   const all = Object.values(exercisesDb).flat();
   const exercise = all.find((e) => e.id === id) || all[0];
+  const favoriteExerciseIds = useMemo(
+    () => (Array.isArray(profile?.favoriteExerciseIds) ? profile.favoriteExerciseIds : []),
+    [profile?.favoriteExerciseIds]
+  );
+  const isFavorite = favoriteExerciseIds.includes(exercise.id);
 
   const muscleLabel = exercise?.primaryMuscles?.join(', ') || 'Partie';
   const instructions = (exercise as any)?.instructions;
+
+  const toggleFavorite = async () => {
+    if (!user || savingFavorite) return;
+
+    const nextIds = isFavorite
+      ? favoriteExerciseIds.filter((x: string) => x !== exercise.id)
+      : [...favoriteExerciseIds, exercise.id];
+
+    setSavingFavorite(true);
+    try {
+      await setDoc(
+        doc(db, 'users', user.uid),
+        {
+          favoriteExerciseIds: nextIds,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error('Chyba při ukládání oblíbených cviků:', error);
+    } finally {
+      setSavingFavorite(false);
+    }
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -29,8 +65,15 @@ export default function ExerciseScreen() {
             <MaterialIcons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
           <ThemedText style={styles.headerTitle} numberOfLines={1}>{exercise.name}</ThemedText>
-          <View style={styles.headerSpacer} />
+          <TouchableOpacity onPress={toggleFavorite} disabled={!user || savingFavorite}>
+            <MaterialIcons
+              name={isFavorite ? 'favorite' : 'favorite-border'}
+              size={24}
+              color={isFavorite ? '#fff' : '#fff'}
+            />
+          </TouchableOpacity>
         </View>
+        <HeaderLogo mode="watermark" />
       </ThemedView>
       
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -57,9 +100,9 @@ export default function ExerciseScreen() {
             }
           </ThemedView>
 
-          <Link href="/(tabs)/muscleselect" asChild>
+          <Link href="/(tabs)/explore" asChild>
             <TouchableOpacity style={styles.backButton}>
-              <ThemedText style={styles.backButtonText}>← Zpět na výběr partií</ThemedText>
+              <ThemedText style={styles.backButtonText}>← Zpět na hledání cviků</ThemedText>
             </TouchableOpacity>
           </Link>
 

@@ -8,6 +8,7 @@ import { auth, db } from '../firebase';
 export type UserProfile = {
   email?: string | null;
   gender?: 'male' | 'female';
+  currentGoal?: string;
   [key: string]: any;
 };
 

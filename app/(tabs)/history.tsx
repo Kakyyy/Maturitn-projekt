@@ -1,3 +1,4 @@
+import HeaderLogo from '@/components/header-logo';
 import MenuButton from '@/components/menu-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -7,6 +8,7 @@ import { db } from '@/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import Svg, { Circle, Line, Polyline } from 'react-native-svg';
 
 type WorkoutExercise = {
   exerciseId?: string;
@@ -19,7 +21,7 @@ type WorkoutExercise = {
 type WorkoutDoc = {
   id: string;
   name: string;
-  createdAtMs: number;
+  lastChangedAtMs: number;
   exercises: WorkoutExercise[];
 };
 
@@ -83,15 +85,20 @@ export default function HistoryScreen() {
       const snapshot = await getDocs(workoutsQuery);
       const loaded: WorkoutDoc[] = snapshot.docs.map((item) => {
         const data = item.data() as any;
+        const lastChangedAtMs =
+          getCreatedAtMs(data?.updatedAt) ||
+          (typeof data?.updatedAtClientMs === 'number' ? data.updatedAtClientMs : 0) ||
+          getCreatedAtMs(data?.createdAt);
+
         return {
           id: item.id,
           name: data?.name || 'Trenink',
-          createdAtMs: getCreatedAtMs(data?.createdAt),
+          lastChangedAtMs,
           exercises: Array.isArray(data?.exercises) ? data.exercises : [],
         };
       });
 
-      loaded.sort((a, b) => b.createdAtMs - a.createdAtMs);
+      loaded.sort((a, b) => b.lastChangedAtMs - a.lastChangedAtMs);
       setWorkouts(loaded);
     } catch (error) {
       console.error('Chyba pri nacitani historie treninku:', error);
@@ -122,16 +129,44 @@ export default function HistoryScreen() {
     return recent.map((w) => {
       const volume = workoutVolume(w);
       const ratio = maxVolume > 0 ? volume / maxVolume : 0;
-      const dateLabel = w.createdAtMs > 0 ? new Date(w.createdAtMs).toLocaleDateString('cs-CZ', { day: '2-digit', month: '2-digit' }) : '--.--';
+      const dateLabel = w.lastChangedAtMs > 0 ? new Date(w.lastChangedAtMs).toLocaleDateString('cs-CZ', { day: '2-digit', month: '2-digit' }) : '--.--';
 
       return {
         id: w.id,
         label: dateLabel,
         volume,
-        heightPercent: Math.max(0.08, ratio),
+        ratio,
       };
     });
   }, [workouts]);
+
+  const lineChart = useMemo(() => {
+    const width = 320;
+    const height = 160;
+    const paddingX = 14;
+    const paddingY = 14;
+    const usableWidth = width - paddingX * 2;
+    const usableHeight = height - paddingY * 2;
+
+    const points = chartData.map((item, index) => {
+      const x = chartData.length === 1
+        ? width / 2
+        : paddingX + (index / (chartData.length - 1)) * usableWidth;
+      const y = Math.min(height - paddingY, height - paddingY - item.ratio * usableHeight + 18);
+      return {
+        ...item,
+        x,
+        y,
+      };
+    });
+
+    return {
+      width,
+      height,
+      points,
+      polyline: points.map((p) => `${p.x},${p.y}`).join(' '),
+    };
+  }, [chartData]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -143,8 +178,8 @@ export default function HistoryScreen() {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <MenuButton onPress={openDrawer} />
-          <ThemedText style={styles.headerTitle}>Historie</ThemedText>
-          <View style={styles.headerSpacer} />
+          <ThemedText style={styles.headerTitle}>Historie tréninků</ThemedText>
+          <HeaderLogo />
         </View>
       </View>
 
@@ -168,26 +203,53 @@ export default function HistoryScreen() {
         </View>
 
         <View style={styles.sectionCard}>
-          <ThemedText style={styles.sectionTitle}>Progress graf (poslednich 7)</ThemedText>
+          <ThemedText style={styles.sectionTitle}>Progres (spojnicový graf, posledních 7)</ThemedText>
           {chartData.length === 0 ? (
             <ThemedText style={styles.emptyText}>Zatim nemas ulozene zadne treninky.</ThemedText>
           ) : (
-            <View style={styles.chartRow}>
-              {chartData.map((item) => (
-                <View key={item.id} style={styles.chartItem}>
-                  <ThemedText style={styles.chartValue}>{Math.round(item.volume)}</ThemedText>
-                  <View style={styles.chartTrack}>
-                    <View style={[styles.chartBar, { height: `${item.heightPercent * 100}%` }]} />
+            <View>
+              <View style={styles.lineChartFrame}>
+                <Svg width="100%" height={lineChart.height} viewBox={`0 0 ${lineChart.width} ${lineChart.height}`}>
+                  <Line x1="14" y1="146" x2="306" y2="146" stroke="#333" strokeWidth="1" />
+                  <Line x1="14" y1="14" x2="14" y2="146" stroke="#222" strokeWidth="1" />
+
+                  <Polyline
+                    points={lineChart.polyline}
+                    fill="none"
+                    stroke="#D32F2F"
+                    strokeWidth="3"
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                  />
+
+                  {lineChart.points.map((point) => (
+                    <Circle
+                      key={point.id}
+                      cx={point.x}
+                      cy={point.y}
+                      r="4"
+                      fill="#fff"
+                      stroke="#D32F2F"
+                      strokeWidth="2"
+                    />
+                  ))}
+                </Svg>
+              </View>
+
+              <View style={styles.lineChartLabels}>
+                {lineChart.points.map((point) => (
+                  <View key={`${point.id}-label`} style={styles.lineChartLabelItem}>
+                    <ThemedText style={styles.lineChartValue}>{Math.round(point.volume)}</ThemedText>
+                    <ThemedText style={styles.lineChartLabel}>{point.label}</ThemedText>
                   </View>
-                  <ThemedText style={styles.chartLabel}>{item.label}</ThemedText>
-                </View>
-              ))}
+                ))}
+              </View>
             </View>
           )}
         </View>
 
         <View style={styles.sectionCard}>
-          <ThemedText style={styles.sectionTitle}>Workout history</ThemedText>
+          <ThemedText style={styles.sectionTitle}>Seznam tréninků</ThemedText>
 
           {loading ? <ThemedText style={styles.emptyText}>Nacitam historii...</ThemedText> : null}
 
@@ -197,8 +259,8 @@ export default function HistoryScreen() {
 
           {!loading && workouts.map((workout) => {
             const isExpanded = expandedWorkoutId === workout.id;
-            const when = workout.createdAtMs > 0
-              ? new Date(workout.createdAtMs).toLocaleString('cs-CZ')
+            const when = workout.lastChangedAtMs > 0
+              ? new Date(workout.lastChangedAtMs).toLocaleString('cs-CZ')
               : 'Neznamy cas';
 
             return (
@@ -323,41 +385,30 @@ const styles = StyleSheet.create({
     color: '#888',
     fontSize: 14,
   },
-  chartRow: {
-    minHeight: 150,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    gap: 8,
+  lineChartFrame: {
+    backgroundColor: '#0B0B0B',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#222',
+    paddingVertical: 8,
+    paddingHorizontal: 6,
   },
-  chartItem: {
+  lineChartLabels: {
+    marginTop: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 4,
+  },
+  lineChartLabelItem: {
     flex: 1,
     alignItems: 'center',
-    minWidth: 34,
   },
-  chartValue: {
+  lineChartValue: {
     color: '#aaa',
-    fontSize: 11,
-    marginBottom: 4,
+    fontSize: 10,
+    fontWeight: '700',
   },
-  chartTrack: {
-    width: 26,
-    height: 100,
-    borderRadius: 8,
-    backgroundColor: '#1E1E1E',
-    borderWidth: 1,
-    borderColor: '#333',
-    justifyContent: 'flex-end',
-    overflow: 'hidden',
-  },
-  chartBar: {
-    width: '100%',
-    backgroundColor: '#D32F2F',
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-  },
-  chartLabel: {
-    marginTop: 5,
+  lineChartLabel: {
     color: '#bbb',
     fontSize: 10,
     fontWeight: '600',

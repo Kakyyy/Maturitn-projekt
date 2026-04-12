@@ -7,14 +7,14 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { auth, db } from '../firebase';
 
@@ -104,36 +104,36 @@ export default function RegisterScreen() {
                 <ThemedText style={styles.label}>Pohlaví</ThemedText>
                 <View style={styles.genderRow}>
                   <TouchableOpacity
-                    style={[
+                    style={StyleSheet.flatten([
                       styles.genderButton,
                       gender === 'male' && styles.genderButtonActive,
-                    ]}
+                    ])}
                     onPress={() => setGender('male')}
                     disabled={loading}
                   >
                     <ThemedText
-                      style={[
+                      style={StyleSheet.flatten([
                         styles.genderButtonText,
                         gender === 'male' && styles.genderButtonTextActive,
-                      ]}
+                      ])}
                     >
                       Muž
                     </ThemedText>
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={[
+                    style={StyleSheet.flatten([
                       styles.genderButton,
                       gender === 'female' && styles.genderButtonActive,
-                    ]}
+                    ])}
                     onPress={() => setGender('female')}
                     disabled={loading}
                   >
                     <ThemedText
-                      style={[
+                      style={StyleSheet.flatten([
                         styles.genderButtonText,
                         gender === 'female' && styles.genderButtonTextActive,
-                      ]}
+                      ])}
                     >
                       Žena
                     </ThemedText>
@@ -182,7 +182,7 @@ export default function RegisterScreen() {
               </View>
 
               <TouchableOpacity
-                style={[styles.registerButton, loading && styles.buttonDisabled]}
+                style={StyleSheet.flatten([styles.registerButton, loading && styles.buttonDisabled])}
                 onPress={handleRegister}
                 disabled={loading}
               >

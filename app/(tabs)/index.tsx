@@ -1,6 +1,6 @@
 // Stránka: Home (Domovská stránka)
 
-import ExerciseData from '@/app/exercise/data';
+import HeaderLogo from '@/components/header-logo';
 import MenuButton from '@/components/menu-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -10,15 +10,14 @@ import { db } from '@/firebase';
 import { Link } from 'expo-router';
 import { doc, setDoc } from 'firebase/firestore';
 import React, { useEffect, useMemo, useState } from 'react';
-import { SafeAreaView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
   const { openDrawer } = useDrawer();
   const { user, profile } = useAuth();
 
   const [openStreak, setOpenStreak] = useState<number>(0);
-
-  const exerciseCount = useMemo(() => Object.values(ExerciseData).flat().length, []);
   const todayLabel = useMemo(() => {
     const date = new Date();
     try {
@@ -101,22 +100,16 @@ export default function HomeScreen() {
   const firstName = (profile?.name || '').trim();
   const greetingName = firstName ? firstName : 'sportovče';
 
-  const goalLabel = (() => {
-    if (!profile?.goal) return 'Začni tím, že si nastavíš cíl v profilu.';
-    if (profile.goal === 'strength') return 'Priorita: síla · těžší váhy, méně opakování.';
-    if (profile.goal === 'mass') return 'Priorita: svalová hmota · střední váhy, 8–12 opakování.';
-    if (profile.goal === 'endurance') return 'Priorita: vytrvalost · lehčí váhy, více opakování.';
-    return 'Uprav si trénink podle sebe v profilu.';
-  })();
+  const goalLabel = (profile?.currentGoal || '').trim() || 'Začni tím, že si nastavíš cíl v profilu.';
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <MenuButton onPress={openDrawer} />
             <ThemedText style={styles.headerTitle}>Domů</ThemedText>
-            <View style={styles.headerSpacer} />
+            <HeaderLogo />
           </View>
         </View>
 
@@ -129,7 +122,7 @@ export default function HomeScreen() {
 
           <View style={styles.primaryActions}>
             <Link href={'/(tabs)/muscleselect'} asChild>
-              <TouchableOpacity style={[styles.primaryCard, styles.primaryCardRed]} accessibilityRole="button">
+              <TouchableOpacity style={StyleSheet.flatten([styles.primaryCard, styles.primaryCardRed])} accessibilityRole="button">
                 <ThemedText style={styles.primaryCardTitle}>Vybrat partii</ThemedText>
                 <ThemedText style={styles.primaryCardSubtitle}>3D výběr → doporučené cviky</ThemedText>
               </TouchableOpacity>
@@ -151,7 +144,7 @@ export default function HomeScreen() {
             </View>
             <View style={styles.statBoxSecondary}>
               <ThemedText style={styles.statLabelSmall}>Databáze</ThemedText>
-              <ThemedText style={styles.statValue}>{exerciseCount}</ThemedText>
+              <ThemedText style={styles.statValue}>99+</ThemedText>
               <ThemedText style={styles.statLabel}>cviků připravených k použití</ThemedText>
             </View>
           </View>

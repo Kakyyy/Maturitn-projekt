@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TSX)
+// Popis: Zdrojový soubor projektu.
+
 // Stránka: Root Layout (Kořenový layout aplikace)
 
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
@@ -76,3 +79,4 @@ export default function RootLayout() {
     </ThemeProvider>
   );
 }
+

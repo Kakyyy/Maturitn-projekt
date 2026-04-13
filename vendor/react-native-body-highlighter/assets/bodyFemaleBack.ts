@@ -1,3 +1,6 @@
+﻿// Jazyk: TypeScript (TS)
+// Popis: Zdrojový soubor projektu.
+
 import { BodyPart } from "..";
 
 export const bodyFemaleBack: BodyPart[] = [
@@ -206,3 +209,4 @@ export const bodyFemaleBack: BodyPart[] = [
     },
   },
 ];
+

@@ -1,6 +1,10 @@
+// Jazyk: TypeScript (TSX)
+// Popis: Zdrojový soubor projektu.
+
 // Stránka: New Workout (Nový trénink)
 
-// Import databáze cviků a komponent
+// LOGIKA- Import databáze cviků a komponent. Tahle obrazovka kombinuje výběr
+// cviků, ukládání do Firestore, vlastní dialogy i drag-and-drop pořadí.
 import { EXERCISES } from '@/app/exercise/data';
 import HeaderLogo from '@/components/header-logo';
 import MenuButton from '@/components/menu-button';
@@ -33,12 +37,23 @@ function normalizeWorkoutName(name: unknown): string {
     .replace(/\s+/g, ' ');
 }
 
-// Obrazovka pro vytváření nového tréninku
+function toInstructionsArray(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map((item) => String(item || '').trim()).filter(Boolean);
+  if (typeof value === 'string') {
+    const single = value.trim();
+    return single ? [single] : [];
+  }
+  return [];
+}
+
+// LOGIKA- Obrazovka pro vytváření nového tréninku. Uživatel tu skládá sloty,
+// přidává cviky, upravuje parametry a následně ukládá trénink do databáze.
 export default function NewWorkoutScreen() {
   const router = useRouter();
   const { openDrawer, setNavigationBlocker } = useDrawer();
   const { user } = useAuth();
-  // State pro uchování tréninkových slotů (jednotlivé dny/tréninky)
+  // LOGIKA- State pro uchování tréninkových slotů, rozbalené karty a všech
+  // pomocných stavů okolo hledání, dialogů a drag-and-drop interakce.
   const [slots, setSlots] = useState<any[]>([]);
   // State pro sbalený/rozbalený trénink
   const [expandedSlotId, setExpandedSlotId] = useState<string | null>(null);
@@ -56,7 +71,8 @@ export default function NewWorkoutScreen() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   // State pro drag-and-drop přesun tréninku
   const [draggingSlotId, setDraggingSlotId] = useState<string | null>(null);
-  // ID aktuálně taženého tréninku (ref drží hodnotu i mezi re-rendery během gesta)
+  // LOGIKA- Ref drží drag stav i mezi re-rendery, aby gesture fungovalo bez
+  // ztráty kontextu během pohybu prstu.
   const draggingSlotIdRef = useRef<string | null>(null);
   // Aktuální pořadí slotů dostupné synchronně uvnitř gesture callbacků
   const slotsRef = useRef<any[]>([]);
@@ -69,7 +85,8 @@ export default function NewWorkoutScreen() {
   // Animovaná vertikální pozice tažené karty
   const dragTranslateY = useRef(new Animated.Value(0)).current;
 
-  // Fallback, když karta ještě nebyla změřena onLayoutem
+  // LOGIKA- Výchozí výška karty a mezera mezi kartami, pokud ještě nejsou
+  // změřené přes onLayout.
   const DEFAULT_SLOT_HEIGHT = 78;
   // Mezera mezi kartami, která se počítá do přeskoku na další pozici
   const SLOT_VERTICAL_GAP = 12;
@@ -78,11 +95,38 @@ export default function NewWorkoutScreen() {
     slotsRef.current = slots;
   }, [slots]);
 
-  // Získání všech cviků ze všech svalových partií
+  // LOGIKA- Všechny cviky ze všech svalových partií jsou dostupné v jednom poli
+  // pro rychlé hledání a vkládání do tréninku.
   const allExercises = Object.values(EXERCISES).flat();
 
-  // Načtení tréninků z Firebase při otevření stránky
-  // Funkce pro načtení tréninků z Firebase
+  // HTML- Zobrazení detailů cviku přes vlastní dialog s instrukcemi.
+  function showExerciseDetails(exercise: any) {
+    const byId = allExercises.find((item: any) => item?.id === exercise?.id);
+    const byName = allExercises.find((item: any) => item?.name === exercise?.name);
+    const source = byId || byName || exercise;
+    const instructions = toInstructionsArray(source?.instructions);
+
+    const message =
+      instructions.length > 0
+        ? instructions.map((step, index) => `${index + 1}. ${step}`).join('\n')
+        : 'Postup pro tento cvik není dostupný.';
+
+    setCustomDialog({
+      visible: true,
+      title: `Podrobnosti: ${source?.name || 'cvik'}`,
+      message,
+      buttons: [
+        {
+          text: 'Zavřít',
+          onPress: () => setCustomDialog({ visible: false, title: '', message: '', buttons: [] }),
+          style: 'cancel',
+        },
+      ],
+    });
+  }
+
+  // LOGIKA- Načtení uložených tréninků z Firebase při otevření stránky.
+  // Zároveň sjednocuje data do lokální struktury slotů.
   const loadWorkouts = useCallback(async () => {
     if (!user) return;
     
@@ -149,7 +193,8 @@ export default function NewWorkoutScreen() {
     }, [loadWorkouts])
   );
 
-  // Registrace navigation blockeru pro kontrolu před odchodem ze stránky
+  // LOGIKA- Navigation blocker hlídá neuložené změny a zabrání nechtěnému
+  // odchodu ze stránky bez potvrzení.
   useEffect(() => {
     const blocker = hasUnsavedChanges && slots.length > 0
       ? async (): Promise<boolean> => {
@@ -189,7 +234,7 @@ export default function NewWorkoutScreen() {
     };
   }, [hasUnsavedChanges, slots, setNavigationBlocker]);
 
-  // Funkce pro přidání nového slotu
+  // LOGIKA- Přidání nového slotu do lokálního plánu tréninku.
   function addNewSlot() {
     const newId = `slot-${Date.now()}`;
     const newName = `Trénink ${slots.length + 1}`;
@@ -198,13 +243,13 @@ export default function NewWorkoutScreen() {
     setExpandedSlotId(null);
   }
 
-  // Funkce pro přejmenování slotu
+  // LOGIKA- Přejmenování slotu a okamžité označení změny jako neuložené.
   function renameSlot(slotId: string, newName: string) {
     setSlots(s => s.map(slot => slot.id === slotId ? { ...slot, name: newName, lastChangedAtMs: Date.now() } : slot));
     setHasUnsavedChanges(true);
   }
 
-  // Funkce pro odstranění tréninku
+  // LOGIKA- Odstranění slotu z lokálního stavu a případně i z Firestore.
   function removeSlot(slotId: string) {
     const slot = slots.find(s => s.id === slotId);
     
@@ -223,7 +268,7 @@ export default function NewWorkoutScreen() {
           onPress: async () => {
             setCustomDialog({ visible: false, title: '', message: '', buttons: [] });
             
-            // Pokud má slot Firebase ID (není to lokální slot-xxx), smažeme ho z Firebase
+            // LOGIKA- Pokud má slot Firebase ID, odstraní se i z databáze.
             if (slotId && !slotId.startsWith('slot-')) {
               try {
                 await deleteDoc(doc(db, 'workouts', slotId));
@@ -246,7 +291,7 @@ export default function NewWorkoutScreen() {
               }
             }
             
-            // Odebrat z lokálního stavu
+            // LOGIKA- Po úspěšném smazání se slot odstraní i z lokálního stavu.
             setSlots(s => {
               const next = s.filter(slot => slot.id !== slotId);
               if (expandedSlotId === slotId) {
@@ -262,7 +307,7 @@ export default function NewWorkoutScreen() {
     });
   }
 
-  // Funkce pro odstranění cviku ze slotu
+  // LOGIKA- Odstranění jednoho cviku z vybraného slotu.
   function removeExerciseFromSlot(slotId: string, exIndex: number) {
     const slot = slots.find(s => s.id === slotId);
     const exerciseName = slot?.exercises[exIndex]?.name || 'tento cvik';
@@ -294,7 +339,8 @@ export default function NewWorkoutScreen() {
     });
   }
 
-  // Funkce pro přidání cviku do konkrétního slotu s defaultními hodnotami (3 série, 8 opakování, 0 kg)
+  // LOGIKA- Přidání cviku do slotu s výchozími hodnotami pro série, opakování
+  // a váhu. Pokud je cvik už přidaný, zobrazí se potvrzení.
   function addExerciseToSlot(slotId: string, ex: any, force: boolean = false) {
     const slot = slots.find(s => s.id === slotId);
     const isAlreadyAdded = slot?.exercises.some((e: any) => e.id === ex.id);
@@ -328,7 +374,7 @@ export default function NewWorkoutScreen() {
     setHasUnsavedChanges(true);
   }
 
-  // Funkce pro aktualizaci parametrů cviku (např. změna počtu sérií nebo opakování)
+  // LOGIKA- Aktualizace parametrů cviku v konkrétním slotu.
   function updateExerciseInSlot(slotId: string, exIndex: number, patch: Partial<any>) {
     setSlots(s => s.map(slot => {
       if (slot.id !== slotId) return slot;
@@ -339,9 +385,9 @@ export default function NewWorkoutScreen() {
     setHasUnsavedChanges(true);
   }
 
-  // Přesun tréninku mezi dvěma pozicemi v seznamu
+  // LOGIKA- Přesun slotu mezi dvěma pozicemi v seznamu pomocí drag-and-drop.
   const moveSlotByIndex = useCallback((fromIndex: number, toIndex: number) => {
-    // Plynulá výměna sousedních karet místo "skokového" přerenderu
+    // LOGIKA- Plynulá výměna sousedních karet místo skokového přerenderu.
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setSlots((prev) => {
       if (fromIndex < 0 || toIndex < 0 || fromIndex >= prev.length || toIndex >= prev.length) return prev;
@@ -357,20 +403,20 @@ export default function NewWorkoutScreen() {
   }, []);
 
   const getSlotTravelDistance = useCallback((slotId?: string) => {
-    // Vzdálenost, kterou musí karta vizuálně "přeskočit" na další pozici
-    // = výška cílové karty + mezera mezi kartami.
+    // LOGIKA- Vzdálenost, kterou musí karta vizuálně přeskočit na další pozici.
+    // Počítá se jako výška sousední karty plus mezera mezi kartami.
     if (!slotId) return DEFAULT_SLOT_HEIGHT + SLOT_VERTICAL_GAP;
     const measuredHeight = slotHeightsRef.current[slotId] ?? DEFAULT_SLOT_HEIGHT;
     return measuredHeight + SLOT_VERTICAL_GAP;
   }, []);
 
   const getSwapThreshold = useCallback((slotId?: string) => {
-    // Výměna nastane po překročení 50 % sousední karty.
+    // LOGIKA- Swap nastane po překročení zhruba poloviny sousední karty.
     return Math.max(28, getSlotTravelDistance(slotId) / 2);
   }, [getSlotTravelDistance]);
 
   const finishDragging = useCallback(() => {
-    // Reset interního drag stavu po puštění prstu
+    // LOGIKA- Reset interního drag stavu po puštění prstu.
     dragVisualOffsetRef.current = 0;
     activeDragIndexRef.current = -1;
     draggingSlotIdRef.current = null;
@@ -390,8 +436,8 @@ export default function NewWorkoutScreen() {
     const index = slotsRef.current.findIndex((slot) => slot.id === slotId);
     if (index === -1) return;
 
-    // Při startu dragu zavřeme editační/interakční stavy,
-    // aby gesture nebylo rušeno dalšími elementy.
+    // LOGIKA- Při startu drag režimu se zavřou editační stavy, aby gesture
+    // nebylo rušeno vyhledáváním nebo přejmenováním slotu.
     setActiveSearchSlot(null);
     setEditingSlotId(null);
 
@@ -442,8 +488,8 @@ export default function NewWorkoutScreen() {
 
         activeDragIndexRef.current = nextIndex;
 
-        // Karta zůstává pod prstem i po více swapech.
-        // Bez této kompenzace by se s každým přeskokem vizuálně "utrhla".
+        // LOGIKA- Karta zůstává pod prstem i po více swapech.
+        // Bez této kompenzace by se s každým přeskokem vizuálně utrhla.
         dragTranslateY.setValue(gestureState.dy - dragVisualOffsetRef.current);
       },
       onPanResponderRelease: finishDragging,
@@ -451,7 +497,8 @@ export default function NewWorkoutScreen() {
     })
   ).current;
 
-  // Funkce pro uložení tréninku do Firebase
+  // LOGIKA- Uložení celého tréninku do Firebase včetně potvrzení prázdných
+  // slotů a následného přepnutí do persistované podoby.
   async function saveWorkout() {
     if (!user) {
       setCustomDialog({
@@ -469,7 +516,7 @@ export default function NewWorkoutScreen() {
       return;
     }
 
-    // Kontrola, zda jsou vyplněné všechny tréninky
+    // LOGIKA- Kontrola, zda některé sloty nejsou prázdné.
     const emptyWorkouts = slots.filter(slot => slot.exercises.length === 0);
     if (emptyWorkouts.length > 0) {
       setCustomDialog({
@@ -523,7 +570,8 @@ export default function NewWorkoutScreen() {
         }
       });
 
-      // Existující tréninky aktualizujeme, nové (slot-*) vytvoříme jen jednou.
+      // LOGIKA- Existující tréninky aktualizujeme, nové lokální sloty vytvoříme
+      // jako nové dokumenty jen jednou.
       const savedSlots = await Promise.all(slots.map(async (slot, index) => {
         const savedAtMs = Date.now();
         const isLocalSlot = typeof slot.id === 'string' && slot.id.startsWith('slot-');
@@ -531,7 +579,7 @@ export default function NewWorkoutScreen() {
         const workoutData = {
           userId: user?.uid,
           name: slot.name,
-          // Persist pořadí tréninků po custom přerovnání uživatelem
+          // LOGIKA- Persist pořadí tréninků po vlastním přerovnání uživatelem.
           order: index,
           exercises: slot.exercises.map((ex: any) => ({
             exerciseId: ex.id,
@@ -608,6 +656,7 @@ export default function NewWorkoutScreen() {
   return (
     <TouchableWithoutFeedback onPress={() => setActiveSearchSlot(null)}>
       <ThemedView style={styles.container}>
+        {/* HTML- Horní lišta stránky s menu, názvem obrazovky a logem. */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <MenuButton onPress={openDrawer} />
@@ -615,8 +664,10 @@ export default function NewWorkoutScreen() {
             <HeaderLogo />
           </View>
         </View>
+        {/* HTML- Scrollovatelný obsah, kde jsou sloty, vyhledávání, akce i dialogy. */}
         <ScrollView contentContainerStyle={styles.content}>
 
+        {/* HTML- Seznam všech tréninkových slotů, které si uživatel skládá. */}
         <View style={styles.slots}>
           {slots.map(slot => {
             const query = searchQuery[slot.id] || '';
@@ -635,7 +686,7 @@ export default function NewWorkoutScreen() {
                 isDragging ? { transform: [{ translateY: dragTranslateY }] } : null,
               ])}
               onLayout={(event) => {
-                // Měření výšky karty pro přesný threshold 50 % sousedního tréninku
+                // LOGIKA- Měření výšky karty pro přesný threshold při drag-and-drop.
                 slotHeightsRef.current[slot.id] = event.nativeEvent.layout.height;
               }}
               {...slotPanResponder.panHandlers}
@@ -648,10 +699,11 @@ export default function NewWorkoutScreen() {
                     if (draggingSlotIdRef.current) return;
                     openWorkoutDetail(slot.id);
                   }}
-                  // Podržení aktivuje drag režim, bez popupu.
+                  // LOGIKA- Dlouhý stisk aktivuje drag režim bez otevření detailu.
                   onLongPress={() => startDragging(slot.id)}
                   delayLongPress={220}
                 >
+                  {/* HTML- Přepínání mezi editací názvu a běžným zobrazením slotu. */}
                   {editingSlotId === slot.id ? (
                     <TextInput
                       style={styles.slotTitleInput}
@@ -669,7 +721,8 @@ export default function NewWorkoutScreen() {
                     <ThemedText style={styles.slotDate}>{formatDateOnly(slot.lastChangedAtMs)}</ThemedText>
                   </View>
                 </TouchableOpacity>
-                <View style={styles.slotHeaderActions}>
+                  {/* HTML- Akce pro odstranění slotu. */}
+                  <View style={styles.slotHeaderActions}>
                   <TouchableOpacity 
                     style={styles.deleteSlotButton}
                     onPress={() => removeSlot(slot.id)}
@@ -680,7 +733,8 @@ export default function NewWorkoutScreen() {
                 </View>
               </View>
 
-              {isExpanded ? (
+                {/* HTML- Rozbalený obsah slotu: vyhledávání, přidání a editace cviků. */}
+                {isExpanded ? (
                 <>
                   <View style={{ flex: 1, position: 'relative', flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                     <TextInput
@@ -691,6 +745,7 @@ export default function NewWorkoutScreen() {
                       placeholder="Vyhledat cvik..."
                       placeholderTextColor="#666"
                     />
+                  {/* HTML- Dropdown s návrhy cviků se ukáže jen při aktivním poli. */}
                   {activeSearchSlot === slot.id && filteredExercises.length > 0 && (
                     <ScrollView 
                       style={styles.searchDropdown}
@@ -714,6 +769,7 @@ export default function NewWorkoutScreen() {
                   )}
                   </View>
 
+                  {/* HTML- Seznam cviků už přidaných do slotu. */}
                   <View style={styles.slotExercises}>
                     {slot.exercises.length === 0 ? (
                       <ThemedText style={styles.noExercise}>Žádné cviky</ThemedText>
@@ -722,8 +778,14 @@ export default function NewWorkoutScreen() {
                         return (
                           <View key={i} style={styles.addedExerciseCard}>
                             <View style={styles.exerciseRow}>
-                              <ThemedText style={styles.exerciseName}>{e.name}</ThemedText>
+                              <View style={styles.exerciseNameWrap}>
+                                <ThemedText style={styles.exerciseName}>{e.name}</ThemedText>
+                                <TouchableOpacity style={styles.detailButton} onPress={() => showExerciseDetails(e)}>
+                                  <ThemedText style={styles.detailButtonText}>Podrobnosti</ThemedText>
+                                </TouchableOpacity>
+                              </View>
                               
+                              {/* HTML- Kompaktní ovládání pro série, opakování a váhu. */}
                               <View style={styles.controlsCompact}>
                                 <View style={styles.weightColumn}>
                                   <ThemedText style={styles.pickerLabel}>Série</ThemedText>
@@ -822,10 +884,12 @@ export default function NewWorkoutScreen() {
             );
           })}
           
+          {/* HTML- Tlačítko pro přidání nového tréninkového slotu. */}
           <TouchableOpacity style={styles.addSlotButton} onPress={addNewSlot}>
             <ThemedText style={styles.addSlotButtonText}>+ Přidat trénink</ThemedText>
           </TouchableOpacity>
 
+          {/* HTML- Finální akce pro uložení tréninku do databáze. */}
           <TouchableOpacity 
             style={StyleSheet.flatten([styles.saveWorkoutButton, (isSaving || slots.length === 0) && styles.saveWorkoutButtonDisabled])} 
             onPress={saveWorkout}
@@ -838,7 +902,7 @@ export default function NewWorkoutScreen() {
         </View>
       </ScrollView>
       
-      {/* Vlastní dialog */}
+      {/* HTML- Vlastní dialog pro potvrzení, chyby a destruktivní akce. */}
       <Modal
         transparent={true}
         visible={customDialog.visible}
@@ -876,6 +940,7 @@ export default function NewWorkoutScreen() {
   );
 }
 
+// CSS- Styly pro uložené tréninky a celý editor tréninku.
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   header: {
@@ -905,12 +970,15 @@ const styles = StyleSheet.create({
     width: 40,
   },
   content: { paddingHorizontal: 12, paddingTop: 24, paddingBottom: 24 },
+  // CSS- Doplňkový horní řádek s akcemi nebo nadpisy.
   headerInline: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, marginTop: 6, marginBottom: 12 },
   headerButton: { backgroundColor: 'rgba(17,17,17,0.9)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#333', justifyContent: 'center', alignItems: 'center' },
   headerButtonText: { color: '#fff', fontSize: 14, fontWeight: '600', lineHeight: 18, textAlignVertical: 'center' as any },
   title: { fontSize: 28, color: '#D32F2F', fontWeight: '800', textAlign: 'center' },
   titleBelowHeader: { marginTop: 8, marginBottom: 6 },
+  // CSS- Kontejner seznamu slotů.
   slots: { marginTop: 18 },
+  // CSS- Karta jednoho tréninkového slotu.
   slotCard: {
     backgroundColor: '#111',
     paddingVertical: 14,
@@ -920,6 +988,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#333',
   },
+  // CSS- Zvýraznění karty během drag-and-drop.
   slotCardDragging: {
     borderColor: '#D32F2F',
     shadowColor: '#000',
@@ -929,6 +998,7 @@ const styles = StyleSheet.create({
     elevation: 10,
     zIndex: 200,
   },
+  // CSS- Hlavička slotu s názvem, datem a akcemi.
   slotHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 10 },
   slotHeaderCollapsed: { marginBottom: 0 },
   slotHeaderMain: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
@@ -955,20 +1025,36 @@ const styles = StyleSheet.create({
   detailSlotButtonText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   deleteSlotButton: { backgroundColor: '#2a2a2a', width: 24, height: 24, borderRadius: 6, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#444' },
   deleteSlotButtonText: { color: '#888', fontSize: 16, fontWeight: '700', lineHeight: 16 },
+  // CSS- Hledací pole pro přidávání cviků do slotu.
   searchInput: { flex: 1, backgroundColor: '#1a1a1a', color: '#fff', fontSize: 13, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#333' },
   searchDropdown: { position: 'absolute', top: 40, left: 0, right: 0, backgroundColor: '#2a2a2a', borderRadius: 8, borderWidth: 1, borderColor: '#444', zIndex: 1000, elevation: 10, maxHeight: 200, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.95, shadowRadius: 6 },
   searchOption: { paddingVertical: 10, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: '#444' },
   searchOptionText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  // CSS- Oblast se seznamem přidaných cviků.
   slotExercises: { minHeight: 40, marginBottom: 8 },
   noExercise: { color: '#888' },
   addedExercise: { backgroundColor: '#0f0f0f', padding: 8, borderRadius: 8, marginBottom: 6 },
+  // CSS- Jednotlivá karta přidaného cviku.
   addedExerciseCard: { backgroundColor: '#0f0f0f', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, marginBottom: 6, borderWidth: 1, borderColor: '#222', borderLeftWidth: 3, borderLeftColor: '#D32F2F' },
   exerciseRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 6 },
+  exerciseNameWrap: { flex: 1, marginRight: 6 },
   exerciseHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   exerciseName: { color: '#fff', fontSize: 13, fontWeight: '600', flex: 1, marginRight: 6 },
+  detailButton: {
+    alignSelf: 'flex-start',
+    marginTop: 4,
+    backgroundColor: '#1a1a1a',
+    borderWidth: 1,
+    borderColor: '#444',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  detailButtonText: { color: '#ddd', fontSize: 11, fontWeight: '700' },
   exerciseSummary: { color: '#aaa', fontSize: 13, fontWeight: '700' },
   removeButton: { backgroundColor: '#D32F2F', width: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center', marginLeft: 4 },
   removeButtonText: { color: '#fff', fontSize: 14, fontWeight: '700', lineHeight: 14 },
+  // CSS- Kompaktní řada ovládacích polí pro parametry cviku.
   controlsCompact: { flexDirection: 'row', gap: 6, alignItems: 'flex-start' },
   pickerColumn: { position: 'relative', zIndex: 10 },
   weightColumn: { minWidth: 45, maxWidth: 50, marginTop: -8 },
@@ -990,8 +1076,10 @@ const styles = StyleSheet.create({
   addScroll: { marginTop: -2 },
   addButton: { backgroundColor: '#1a1a1a', paddingHorizontal: 8, paddingVertical: 6, borderRadius: 8, marginRight: 6, borderWidth: 1, borderColor: '#333' },
   addButtonText: { color: '#fff', fontSize: 11 },
+  // CSS- Tlačítko pro přidání dalšího slotu.
   addSlotButton: { backgroundColor: '#1a1a1a', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#444', alignItems: 'center', marginTop: 8 },
   addSlotButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  // CSS- Hlavní tlačítko pro uložení tréninku.
   saveWorkoutButton: { backgroundColor: '#D32F2F', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 16, borderWidth: 1, borderColor: '#D32F2F' },
   saveWorkoutButtonDisabled: { backgroundColor: '#444', borderColor: '#444', opacity: 0.7 },
   saveWorkoutButtonText: { color: '#fff', fontSize: 18, fontWeight: '800', textTransform: 'uppercase' },
@@ -1008,6 +1096,7 @@ const styles = StyleSheet.create({
   selectorTextSmall: { color: '#fff', fontSize: 11 },
   selectorTextActive: { color: '#fff', fontWeight: '700' },
   // Modal styly
+  // CSS- Překryv pro vlastní potvrzovací dialog.
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.85)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 },
   modalContent: { backgroundColor: '#1a1a1a', borderRadius: 16, padding: 20, width: '100%', maxWidth: 400, borderWidth: 1, borderColor: '#333' },
   modalTitle: { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 10, textAlign: 'center' },
@@ -1017,7 +1106,7 @@ const styles = StyleSheet.create({
   modalButtonDestructive: { backgroundColor: '#D32F2F', borderColor: '#D32F2F' },
   modalButtonText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   modalButtonTextDestructive: { color: '#fff' },
-  // Styly pro uložené tréninky
+  // CSS- Styly pro uložené tréninky, které jsou zobrazené v samostatné části.
   savedWorkoutsSection: { marginBottom: 20, paddingVertical: 12 },
   sectionTitle: { color: '#fff', fontSize: 18, fontWeight: '700', marginBottom: 12, paddingHorizontal: 4 },
   savedWorkoutCard: { backgroundColor: '#111', padding: 14, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#333', width: '100%' },
@@ -1030,3 +1119,4 @@ const styles = StyleSheet.create({
   savedWorkoutButtonDelete: { backgroundColor: '#444', paddingHorizontal: 14, minWidth: 40 },
   savedWorkoutButtonText: { color: '#fff', fontSize: 13, fontWeight: '700' },
 });
+

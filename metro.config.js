@@ -1,3 +1,6 @@
+// Jazyk: JavaScript (JS)
+// Popis: Zdrojovy soubor projektu.
+
 // Konfigurace Metro bundleru (Expo) včetně napojení vendored balíčku.
 
 const path = require('path');
@@ -19,3 +22,4 @@ config.resolver.extraNodeModules = {
 config.watchFolders = [...(config.watchFolders || []), vendoredBodyHighlighter];
 
 module.exports = config;
+

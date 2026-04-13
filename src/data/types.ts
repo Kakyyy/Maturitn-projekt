@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TS)
+// Popis: Zdrojový soubor projektu.
+
 // Typy: společné TS typy pro databázi cviků.
 
 export type Difficulty = "easy" | "medium" | "hard";
@@ -16,3 +19,4 @@ export type Exercise = {
 export type ExerciseMap = Record<string, Exercise[]>;
 
 export default {};
+

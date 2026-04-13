@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TSX)
+// Popis: Zdrojový soubor projektu.
+
 // UI (iOS): ikona přes SF Symbols (expo-symbols).
 
 import { SymbolView, SymbolViewProps, SymbolWeight } from 'expo-symbols';
@@ -32,3 +35,4 @@ export function IconSymbol({
     />
   );
 }
+

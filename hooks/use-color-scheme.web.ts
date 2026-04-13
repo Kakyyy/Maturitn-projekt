@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TS)
+// Popis: Zdrojový soubor projektu.
+
 // Hook (web): vrací aktuální barevné schéma (light/dark) při renderování na webu.
 
 import { useEffect, useState } from 'react';
@@ -21,3 +24,4 @@ export function useColorScheme() {
 
   return 'light';
 }
+

@@ -1,4 +1,9 @@
+// Jazyk: TypeScript (TSX)
+// Popis: Zdrojový soubor projektu.
+
 // Stránka: Tabs Layout (Layout s drawer navigací)
+// LOGIKA- Tohle je společný obal všech obrazovek v této složce. Vkládá sem
+// drawer navigaci a zároveň hlídá, jaké routy jsou dostupné v layoutu.
 
 import DrawerMenu from '@/components/drawer-menu';
 import { DrawerProvider, useDrawer } from '@/contexts/DrawerContext';
@@ -10,6 +15,7 @@ function LayoutContent() {
 
   return (
     <>
+      {/* HTML- Stack navigace pro jednotlivé obrazovky v sekci tabs. */}
       <Stack
         screenOptions={{
           headerShown: false,
@@ -23,12 +29,13 @@ function LayoutContent() {
         <Stack.Screen name="profile" />
       </Stack>
       
+      {/* HTML- Přes celý layout se vykresluje vlastní drawer menu. */}
       <DrawerMenu visible={isOpen} onClose={closeDrawer} />
     </>
   );
 }
 
-// Layout pro aplikaci s drawer menu místo spodní navigační lišty
+// LOGIKA- Vnější provider, který zpřístupní stav draweru všem screenům uvnitř.
 export default function TabLayout() {
   return (
     <DrawerProvider>
@@ -36,3 +43,4 @@ export default function TabLayout() {
     </DrawerProvider>
   );
 }
+

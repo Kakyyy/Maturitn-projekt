@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TSX)
+// Popis: Zdrojový soubor projektu.
+
 // Stránka: Profile (Uživatelský profil)
 
 import HeaderLogo from '@/components/header-logo';
@@ -39,6 +42,8 @@ function toTimestampMs(value: any): number {
 }
 
 export default function ProfileScreen() {
+  // LOGIKA- Drawer je potřeba pro horní menu, zbytek formuláře pracuje nad
+  // profilem uživatele uloženým ve Firestore.
   const { openDrawer } = useDrawer();
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [name, setName] = useState('');
@@ -51,7 +56,8 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ workouts: 0, exercises: 0, days: 0 });
 
-  // Původní hodnoty pro detekci změn
+  // LOGIKA- Původní hodnoty slouží jako reference pro zjištění, zda uživatel
+  // něco změnil oproti poslednímu načtení.
   const [originalData, setOriginalData] = useState({
     gender: 'male' as 'male' | 'female',
     name: '',
@@ -62,12 +68,13 @@ export default function ProfileScreen() {
     currentGoal: '',
   });
 
-  // Načtení dat z Firestore při otevření stránky
+  // LOGIKA- Při otevření stránky se načte profil i související statistiky.
   useEffect(() => {
     loadProfile();
     loadWorkoutStats();
   }, []);
 
+  // LOGIKA- Statistiky tréninků, cviků a dnů se počítají přímo z Firestore.
   const loadWorkoutStats = async () => {
     try {
       const user = auth.currentUser;
@@ -80,6 +87,8 @@ export default function ProfileScreen() {
           ? userDocSnap.data().openStreak
           : null;
 
+      // LOGIKA- Všechny workouty se zkusí seskupit podle unikátní kombinace,
+      // aby se nepočítaly duplicity při přehledu statistik.
       const workoutsQuery = query(collection(db, 'workouts'), where('userId', '==', user.uid));
       const querySnapshot = await getDocs(workoutsQuery);
 
@@ -128,6 +137,8 @@ export default function ProfileScreen() {
     }
   };
 
+  // LOGIKA- Načtení základních údajů profilu do formuláře a jejich kopie do
+  // originálních hodnot pro pozdější porovnávání změn.
   const loadProfile = async () => {
     try {
       const user = auth.currentUser;
@@ -165,7 +176,7 @@ export default function ProfileScreen() {
     }
   };
 
-  // Kontrola, zda byly provedeny změny
+  // LOGIKA- Porovnání aktuálního formuláře s původními daty z Firestore.
   const hasChanges = useCallback(() => {
     return (
       gender !== originalData.gender ||
@@ -193,7 +204,7 @@ export default function ProfileScreen() {
     originalData.currentGoal,
   ]);
 
-  // Auto-uložení dat do Firestore
+  // LOGIKA- Automatické uložení změn do Firestore po krátké prodlevě.
   const persistProfile = useCallback(async () => {
     if (!hasChanges() || loading) return;
 
@@ -217,7 +228,8 @@ export default function ProfileScreen() {
           { merge: true }
         );
         
-        // Aktualizovat původní data po uložení
+        // LOGIKA- Po úspěšném uložení se nové hodnoty stanou novým základem pro
+        // další porovnávání změn.
         setOriginalData({
           gender,
           name,
@@ -256,6 +268,7 @@ export default function ProfileScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      {/* HTML- Horní lišta stránky s menu, názvem profilu a logem. */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <MenuButton onPress={openDrawer} />
@@ -264,9 +277,12 @@ export default function ProfileScreen() {
         </View>
       </View>
       
+      {/* HTML- Formulář profilu a přehled statistik v jednom scrollovatelném celku. */}
       <ScrollView contentContainerStyle={styles.content}>
 
+        {/* HTML- Sekce s osobními údaji uživatele. */}
         <View style={styles.section}>
+          {/* HTML- Výběr pohlaví je řešen dvěma tlačítky místo dropdownu. */}
           <View style={styles.inputGroup}>
             <ThemedText style={styles.label}>Pohlaví</ThemedText>
             <View style={styles.genderRow}>
@@ -308,6 +324,7 @@ export default function ProfileScreen() {
             </View>
           </View>
 
+          {/* HTML- Dvojice polí vedle sebe pro jméno a příjmení. */}
           <View style={styles.row}>
             <View style={StyleSheet.flatten([styles.inputGroup, { flex: 1, marginRight: 8 }])}>
               <ThemedText style={styles.label}>Jméno</ThemedText>
@@ -332,6 +349,7 @@ export default function ProfileScreen() {
             </View>
           </View>
 
+          {/* HTML- Další dvojice polí pro věk a výšku. */}
           <View style={styles.row}>
             <View style={StyleSheet.flatten([styles.inputGroup, { flex: 1 }])}>
               <ThemedText style={styles.label}>Věk</ThemedText>
@@ -370,6 +388,7 @@ export default function ProfileScreen() {
             </View>
           </View>
 
+          {/* HTML- Textové pole pro aktuální cíl, které může být delší než běžný input. */}
           <View style={styles.inputGroup}>
             <ThemedText style={styles.label}>Tvůj aktuální cíl</ThemedText>
             <TextInput
@@ -384,8 +403,10 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* HTML- Stav ukládání se ukáže jen tehdy, když něco právě probíhá nebo došlo k výsledku. */}
         {saveStatusText ? <ThemedText style={styles.saveStatus}>{saveStatusText}</ThemedText> : null}
 
+        {/* HTML- Přehled statistik trénování přímo z databáze uživatele. */}
         <View style={styles.statsSection}>
           <ThemedText style={styles.sectionTitle}>Statistiky</ThemedText>
           <View style={styles.statsGrid}>
@@ -408,11 +429,13 @@ export default function ProfileScreen() {
   );
 }
 
+// CSS- Stylování profilu v černo-červeném vizuálu aplikace.
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
   },
+  // CSS- Horní červená lišta s měkkým stínem.
   header: {
     backgroundColor: '#D32F2F',
     paddingTop: 44,
@@ -439,6 +462,7 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 40,
   },
+  // CSS- Hlavní prostor pro formulář a přehled statistik.
   content: {
     paddingHorizontal: 24,
     paddingVertical: 24,
@@ -447,6 +471,7 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 32,
   },
+  // CSS- Textové popisky jednotlivých polí a bloků formuláře.
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
@@ -482,6 +507,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
+  // CSS- Přepínače pohlaví se zvýrazněním aktivní volby.
   genderButton: {
     flex: 1,
     backgroundColor: '#1a1a1a',
@@ -511,6 +537,7 @@ const styles = StyleSheet.create({
     marginTop: -8,
     marginBottom: 24,
   },
+  // CSS- Kartičky statistik pod profilem.
   statsSection: {
     marginTop: 16,
   },
@@ -539,3 +566,4 @@ const styles = StyleSheet.create({
     color: '#999',
   },
 });
+

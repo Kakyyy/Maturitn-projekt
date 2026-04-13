@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TS)
+// Popis: Zdrojový soubor projektu.
+
 // Data: agregace všech cviků do jedné exportované kolekce.
 
 import ABS from '../abs';
@@ -32,3 +35,4 @@ export const EXERCISES: ExerciseMap = {
 };
 
 export default EXERCISES;
+

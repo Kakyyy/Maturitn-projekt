@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TSX)
+// Popis: Zdrojový soubor projektu.
+
 // Stránka: Muscle Select (Výběr svalové partie pomocí 3D modelu)
 
 // Import komponent a knihovny pro zobrazování 3D modelu těla
@@ -69,6 +72,7 @@ export default function MuscleSelectScreen() {
   const bodyGender = (profile?.gender === 'female' ? 'female' : 'male') as
     | 'male'
     | 'female';
+  const bodyScale = bodyGender === 'female' ? 1.22 : 1.35;
 
   
   return (
@@ -98,7 +102,7 @@ export default function MuscleSelectScreen() {
             data={selected ? selected.data : []}
             gender={bodyGender}
             side={side}
-            scale={1.35}
+            scale={bodyScale}
             border="#D32F2F"
             colors={["#D32F2F", "#fff"]}
             onBodyPartPress={handleBodyPartPress}

@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TSX)
+// Popis: Zdrojový soubor projektu.
+
 // Stránka: Modal (Modální okno)
 
 import { Link } from 'expo-router';
@@ -29,3 +32,4 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
   },
 });
+

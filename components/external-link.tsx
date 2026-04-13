@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TSX)
+// Popis: Zdrojový soubor projektu.
+
 // Komponenta: externí odkaz (otevření URL v prohlížeči / in-app prohlížeči).
 
 import { Href, Link } from 'expo-router';
@@ -25,3 +28,4 @@ export function ExternalLink({ href, ...rest }: Props) {
     />
   );
 }
+

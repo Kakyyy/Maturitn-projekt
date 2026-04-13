@@ -1,3 +1,6 @@
+﻿// Jazyk: JavaScript (JS)
+// Popis: Zdrojovy soubor projektu.
+
 module.exports = {
   getTransformModulePath() {
     return require.resolve("react-native-typescript-transformer");
@@ -6,3 +9,4 @@ module.exports = {
     return ["ts", "tsx"];
   }
 };
+

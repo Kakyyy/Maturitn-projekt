@@ -1,3 +1,6 @@
+﻿// Jazyk: JavaScript (JS)
+// Popis: Zdrojovy soubor projektu.
+
 // Konfigurace ESLintu pro projekt.
 
 // https://docs.expo.dev/guides/using-eslint/
@@ -10,3 +13,4 @@ module.exports = defineConfig([
     ignores: ['dist/*'],
   },
 ]);
+

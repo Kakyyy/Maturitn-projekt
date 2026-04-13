@@ -1,3 +1,6 @@
+﻿// Jazyk: TypeScript (TSX)
+// Popis: Zdrojový soubor projektu.
+
 import * as React from "react";
 import Svg, { G, Path } from "react-native-svg";
 
@@ -41,3 +44,4 @@ export const SvgMaleWrapper: React.FC<SvgWrapperProps> = ({
     </Svg>
   );
 };
+

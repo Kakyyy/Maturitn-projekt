@@ -1,3 +1,6 @@
+﻿// Jazyk: TypeScript (TSX)
+// Popis: Zdrojový soubor projektu.
+
 import differenceWith from "ramda/src/differenceWith";
 import React, { useCallback, useRef } from "react";
 import { Path } from "react-native-svg";
@@ -207,3 +210,4 @@ const Body = ({
 };
 
 export default Body;
+

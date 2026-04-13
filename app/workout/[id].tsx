@@ -154,6 +154,15 @@ export default function WorkoutDetailScreen() {
     return allExercises.filter((ex: any) => ex.name.toLowerCase().includes(q)).slice(0, 8);
   }, [allExercises, searchQuery]);
 
+  function openExerciseDetails(exercise: WorkoutExercise) {
+    const byId = allExercises.find((item: any) => item?.id === exercise?.exerciseId);
+    const byName = allExercises.find((item: any) => item?.name === exercise?.exerciseName);
+    const source = byId || byName;
+    const resolvedId = source?.id || exercise?.exerciseId;
+    if (!resolvedId) return;
+    router.push({ pathname: '/exercise/[id]', params: { id: resolvedId } });
+  }
+
   useEffect(() => {
     if (!restRunning) return;
     if (restSeconds <= 0) {
@@ -213,13 +222,11 @@ export default function WorkoutDetailScreen() {
       {
         exerciseId: ex.id,
         exerciseName: ex.name,
-        sets: 3,
-        reps: 8,
+        sets: 1,
+        reps: 0,
         weight: 0,
         series: [
-          { reps: 8, weight: 0 },
-          { reps: 8, weight: 0 },
-          { reps: 8, weight: 0 },
+          { reps: 0, weight: 0 },
         ],
       },
     ]);
@@ -441,9 +448,14 @@ export default function WorkoutDetailScreen() {
                   <View key={`${ex.exerciseId || ex.exerciseName || 'ex'}-${index}`} style={styles.exerciseCard}>
                     <View style={styles.exerciseHeaderRow}>
                       <ThemedText style={styles.exerciseName}>{ex.exerciseName || 'Neznámý cvik'}</ThemedText>
-                      <TouchableOpacity style={styles.removeBtn} onPress={() => removeExercise(index)}>
-                        <ThemedText style={styles.removeBtnText}>×</ThemedText>
-                      </TouchableOpacity>
+                      <View style={styles.exerciseHeaderActions}>
+                        <TouchableOpacity style={styles.detailsBtn} onPress={() => openExerciseDetails(ex)}>
+                          <ThemedText style={styles.detailsBtnText}>Podrobnosti</ThemedText>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.removeBtn} onPress={() => removeExercise(index)}>
+                          <ThemedText style={styles.removeBtnText}>×</ThemedText>
+                        </TouchableOpacity>
+                      </View>
                     </View>
                     <View style={styles.exerciseHeaderDivider} />
 
@@ -545,6 +557,7 @@ export default function WorkoutDetailScreen() {
                 </View>
               </View>
             </Modal>
+
           </>
         ) : null}
       </SafeAreaView>
@@ -557,9 +570,10 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   header: {
     backgroundColor: '#D32F2F',
-    paddingTop: 44,
-    paddingBottom: 14,
+    paddingTop: 50,
+    paddingBottom: 18,
     paddingHorizontal: 16,
+    minHeight: 108,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -767,12 +781,22 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   exerciseHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 },
+  exerciseHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   exerciseHeaderDivider: {
     height: 1,
     backgroundColor: '#2a2a2a',
     marginBottom: 2,
   },
   exerciseName: { color: '#fff', fontSize: 15, fontWeight: '700', marginBottom: 0 },
+  detailsBtn: {
+    backgroundColor: '#1a1a1a',
+    borderWidth: 1,
+    borderColor: '#444',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  detailsBtnText: { color: '#ddd', fontSize: 11, fontWeight: '700' },
   removeBtn: {
     backgroundColor: '#D32F2F',
     width: 20,

@@ -1,3 +1,6 @@
+// Jazyk: JavaScript (JS)
+// Popis: Zdrojovy soubor projektu.
+
 #!/usr/bin/env node
 
 // Script: resetuje Expo starter projekt do “prázdného” stavu.
@@ -112,3 +115,4 @@ rl.question(
     }
   }
 );
+

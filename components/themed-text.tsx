@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TSX)
+// Popis: Zdrojový soubor projektu.
+
 // Komponenta: Text s barvami a styly podle aktuálního tématu.
 
 import { StyleSheet, Text, type TextProps } from 'react-native';
@@ -61,3 +64,4 @@ const styles = StyleSheet.create({
     color: '#0a7ea4',
   },
 });
+

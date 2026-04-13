@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TSX)
+// Popis: Zdrojový soubor projektu.
+
 // Komponenta: tlačítko (ikona) pro otevření bočního menu.
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -27,3 +30,4 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 });
+

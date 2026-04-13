@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TS)
+// Popis: Zdrojový soubor projektu.
+
 // Konstanty: barvy a fonty aplikace pro light/dark režim.
 
 import { Platform } from 'react-native';
@@ -48,3 +51,4 @@ export const Fonts = Platform.select({
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });
+

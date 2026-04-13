@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TSX)
+// Popis: Zdrojový soubor projektu.
+
 // Stránka: Login (Přihlášení)
 
 import { ThemedText } from '@/components/themed-text';
@@ -77,7 +80,7 @@ export default function LoginScreen() {
                 <ThemedText style={styles.label}>Email</ThemedText>
                 <TextInput
                   style={styles.input}
-                  placeholder="tvuj@email.cz"
+                  placeholder="tvůj@email.cz"
                   placeholderTextColor="#666"
                   value={email}
                   onChangeText={setEmail}
@@ -112,7 +115,7 @@ export default function LoginScreen() {
 
               <View style={styles.footer}>
                 <ThemedText style={styles.footerText}>
-                  Nemáš účet?{' '}
+                  Nemáte účet?{' '}
                 </ThemedText>
                 <TouchableOpacity onPress={() => router.push('/register')}>
                   <ThemedText style={styles.link}>Zaregistruj se</ThemedText>
@@ -223,3 +226,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
+

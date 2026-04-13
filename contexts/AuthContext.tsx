@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TSX)
+// Popis: Zdrojový soubor projektu.
+
 // Kontext: správa přihlášení a načítání profilu uživatele z Firebase.
 
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -78,3 +81,4 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     </AuthContext.Provider>
   );
 };
+

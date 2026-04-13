@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TS)
+// Popis: Zdrojový soubor projektu.
+
 // Hook: vrací barvu podle aktuálního tématu (light/dark) a klíče z palety.
 
 /**
@@ -21,3 +24,4 @@ export function useThemeColor(
     return Colors[theme][colorName];
   }
 }
+

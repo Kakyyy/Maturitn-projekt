@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TSX)
+// Popis: Zdrojový soubor projektu.
+
 // Komponenta: tab tlačítko s haptickou odezvou.
 
 import { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
@@ -18,3 +21,4 @@ export function HapticTab(props: BottomTabBarButtonProps) {
     />
   );
 }
+

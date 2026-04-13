@@ -1,3 +1,6 @@
+﻿// Jazyk: JavaScript (JS)
+// Popis: Zdrojovy soubor projektu.
+
 // Firebase: inicializace aplikace + export Auth/Firestore/Storage pro React Native.
 
 // Import the functions you need from the SDKs you need

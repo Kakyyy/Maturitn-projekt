@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TSX)
+// Popis: Zdrojový soubor projektu.
+
 // Komponenta: ScrollView s paralaxním efektem a animací headeru.
 
 import type { PropsWithChildren, ReactElement } from 'react';
@@ -80,3 +83,4 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 });
+

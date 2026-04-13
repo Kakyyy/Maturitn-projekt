@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TSX)
+// Popis: Zdrojový soubor projektu.
+
 // UI: ikona se sjednoceným vzhledem (iOS SF Symbols, Android/web MaterialIcons).
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -39,3 +42,4 @@ export function IconSymbol({
 }) {
   return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
 }
+

@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TSX)
+// Popis: Zdrojový soubor projektu.
+
 // UI: rozbalovací/skrývatelná sekce (collapsible).
 
 import { PropsWithChildren, useState } from 'react';
@@ -45,3 +48,4 @@ const styles = StyleSheet.create({
     marginLeft: 24,
   },
 });
+

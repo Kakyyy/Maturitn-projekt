@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TSX)
+// Popis: Zdrojový soubor projektu.
+
 // Kontext: stav a ovládání bočního menu (drawer) + možnost blokovat navigaci.
 
 import React, { createContext, useContext, useRef, useState } from 'react';
@@ -53,3 +56,4 @@ export function useDrawer() {
   }
   return context;
 }
+

@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TSX)
+// Popis: Zdrojový soubor projektu.
+
 // Komponenta: View s barvami pozadí podle aktuálního tématu.
 
 import { View, type ViewProps } from 'react-native';
@@ -14,3 +17,4 @@ export function ThemedView({ style, lightColor, darkColor, ...otherProps }: Them
 
   return <View style={[{ backgroundColor }, style]} {...otherProps} />;
 }
+

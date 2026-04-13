@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TSX)
+// Popis: Zdrojový soubor projektu.
+
 // Komponenta: mávající emoji animace.
 
 import Animated from 'react-native-reanimated';
@@ -20,3 +23,4 @@ export function HelloWave() {
   );
 // Komponenta: drobný dekorativní „wave“ prvek pro UI.
 }
+

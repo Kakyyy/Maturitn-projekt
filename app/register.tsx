@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TSX)
+// Popis: Zdrojový soubor projektu.
+
 // Stránka: Register (Registrace)
 
 import { ThemedText } from '@/components/themed-text';
@@ -96,7 +99,7 @@ export default function RegisterScreen() {
               Registrace
             </ThemedText>
             <ThemedText style={styles.subtitle}>
-              Vytvoř si účet a začni trénovat
+              Vytvořte si účet a začněte trénovat
             </ThemedText>
 
             <View style={styles.form}>
@@ -145,7 +148,7 @@ export default function RegisterScreen() {
                 <ThemedText style={styles.label}>Email</ThemedText>
                 <TextInput
                   style={styles.input}
-                  placeholder="tvuj@email.cz"
+                  placeholder="tvůj@email.cz"
                   placeholderTextColor="#666"
                   value={email}
                   onChangeText={setEmail}
@@ -193,7 +196,7 @@ export default function RegisterScreen() {
 
               <View style={styles.footer}>
                 <ThemedText style={styles.footerText}>
-                  Už máš účet?{' '}
+                  Máte již účet?{' '}
                 </ThemedText>
                 <TouchableOpacity onPress={() => router.push('/login')}>
                   <ThemedText style={styles.link}>Přihlas se</ThemedText>
@@ -329,3 +332,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
+

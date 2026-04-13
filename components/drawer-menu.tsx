@@ -1,3 +1,6 @@
+// Jazyk: TypeScript (TSX)
+// Popis: Zdrojový soubor projektu.
+
 // Komponenta: boční (drawer) menu s navigací mezi obrazovkami.
 
 import { ThemedText } from '@/components/themed-text';
@@ -200,3 +203,4 @@ const styles = StyleSheet.create({
     color: '#D32F2F',
   },
 });
+

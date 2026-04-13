@@ -1,3 +1,6 @@
+// Jazyk: JavaScript (JS)
+// Popis: Zdrojovy soubor projektu.
+
 /* eslint-disable @typescript-eslint/no-var-requires */
 
 // Script: generuje PowerPoint prezentaci projektu PowerGainz.
@@ -772,3 +775,4 @@ function main() {
 }
 
 main();
+
